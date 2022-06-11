@@ -7,3 +7,11 @@
 out
 auxil
 gen
+*.blg
+*.bbl
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+.vscode
