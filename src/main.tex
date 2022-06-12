@@ -5,30 +5,71 @@
 % Preamble
 %\documentclass[11pt]{book}
 
-\documentclass[12pt, letterpaper, twoside, openright, a4paper]{book}
+\documentclass[12pt, letterpaper, twoside, openright, a4paper]{report}
 % Packages
 \usepackage{amsmath}
-\usepackage[italian]{babel}
+\usepackage[italian,english]{babel}
 \usepackage{newlfont}
 \usepackage{gensymb}
 \usepackage{lipsum}
+\usepackage{hyperref}
+\usepackage{xr}
+\usepackage{graphicx}
+\usepackage{caption,subcaption}
 
-\newcommand\abstractname{Abstract}  %%% here
+\usepackage{listings}
+
+%Gestione degli alberi delle strutture delle cartelle
+\usepackage{forest}
+
+\definecolor{folderbg}{RGB}{124,166,198}
+\definecolor{folderborder}{RGB}{110,144,169}
+
+
+\def\Size{4pt}
+\tikzset{
+      folder/.pic={
+        \filldraw[draw=folderborder,top color=folderbg!50,bottom color=folderbg]
+          (-1.05*\Size,0.2\Size+5pt) rectangle ++(.75*\Size,-0.2\Size-5pt);  
+        \filldraw[draw=folderborder,top color=folderbg!50,bottom color=folderbg]
+          (-1.15*\Size,-\Size) rectangle (1.15*\Size,\Size);
+      }
+    }
+
+
+%Comando per fare reference ad altri file
+\makeatletter
+\newcommand*{\addFileDependency}[1]{% argument=file name and extension
+  \typeout{(#1)}
+  \@addtofilelist{#1}
+  \IfFileExists{#1}{}{\typeout{No file #1.}}
+}
+\makeatother
+
+\newcommand*{\myexternaldocument}[1]{%
+    \externaldocument{#1}%
+    \addFileDependency{#1.tex}%
+    \addFileDependency{#1.aux}%
+}
 
 %Comando per scrivere c++
-\newcommand{\CC}{C\nolinebreak\hspace{-.05em}\raisebox{.4ex}{\tiny\bf +}\nolinebreak\hspace{-.10em}\raisebox{.4ex}{\tiny\bf +}}
-\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+\newcommand{\CPP}{C\nolinebreak\hspace{-.05em}\raisebox{.4ex}{\tiny\bf +}\nolinebreak\hspace{-.10em}\raisebox{.4ex}{\tiny\bf +}}
+\def\CPP{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
 
-%Comando per scrivere Machine Learning e Deep Learning
+%Comandi per scrivere parole in inglese
 \newcommand{\ML}{\textit{Machine Learning}}
 \newcommand{\DL}{\textit{Deep Learning}}
+\newcommand{\DS}{\textit{Dataset}}
+\newcommand{\ds}{\textit{dataset}}
+
+%Comando per il referecing di capitoli
+\NewDocumentCommand{\chapref}{s m}{Chapter~\ref{#2}\IfBooleanF{#1}{ \nameref{#2}}}
 
 % Per il frontespizio
-\textwidth=450pt\oddsidemargin=0pt
+\textwidth=450pt\oddsidemargin=0pt\evensidemargin=0pt
 
 % Documents
 \begin{document}
-    \frontmatter
     \include{frontespizio.tex}
     \include{abstract.tex}
 
@@ -36,10 +77,9 @@
     \listoffigures
     \listoftables
 
-    \mainmatter
     \include{capitoloIntroduzione.tex}
     \include{capitoloPrimo.tex}
-    \cite{Dirac19}
+    \include{capitoloDue.tex}
 
     \cleardoublepage
     \bibliographystyle{plain}
