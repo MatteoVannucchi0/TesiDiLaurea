@@ -19,6 +19,9 @@
 
 \usepackage{listings}
 
+%Per tabelle
+\usepackage{caption, tabularx, ragged2e, array}
+
 %Gestione degli alberi delle strutture delle cartelle
 \usepackage{forest}
 
@@ -35,7 +38,6 @@
           (-1.15*\Size,-\Size) rectangle (1.15*\Size,\Size);
       }
     }
-
 
 %Comando per fare reference ad altri file
 \makeatletter
@@ -61,6 +63,9 @@
 \newcommand{\DL}{\textit{Deep Learning}}
 \newcommand{\DS}{\textit{Dataset}}
 \newcommand{\ds}{\textit{dataset}}
+
+%Comandi per i record di dati
+\newcommand{\record}[1]{\textlangle\textit{#1}\textrangle }
 
 %Comando per il referecing di capitoli
 \NewDocumentCommand{\chapref}{s m}{Chapter~\ref{#2}\IfBooleanF{#1}{ \nameref{#2}}}

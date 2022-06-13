@@ -87,7 +87,7 @@ Gli analizzatori non sono però perfetti, infatti nell'insieme degli errori trov
 è quello di ridurre il numero di falsi positivi.
 
 
-\subsection{Analisi a livello di progetto}
+\subsection{Analisi a livello di progetto} \label{subsec:compile_database}
 La maggior parte degli analizzatori statici inoltre è in grado di lavorare a livello di progetti, andando quindi a risolvere correttamente gli \textit{include} (nel caso di C e \CPP), e quindi generando un output più significativo. 
 Alcuni di questi per far ciò hanno bisogno di quello che viene chiamato \textit{compilation database} e, per soddisfare questo requisito, esistono strumenti appositi che utilizzano il Makefile per generarlo, nel caso di questo lavoro è stato utilizzato un programma
 chiamato Bear
@@ -97,16 +97,107 @@ chiamato Bear
 Come analizzatori statici ulteriori da aggiungere in più a Infer, di cui ogni elemento del dataset ha già l'analisi sua associata, sono stati scelti i seguenti tre:
     \begin{itemize}
         \item L'analizzatore Cppcheck che, a detta degli autori, ha come scopo principale il ridurre il numero di falsi positivi.
-        \item Il compilatore GCC che nonostante sia un compilatore vero e proprio ha anche funzionalità per l'analisi statica dei programmi attraverso la flag \textit{-fanalyzer}.
+        \item Il compilatore GCC che, nonostante sia un compilatore vero e proprio, ha anche funzionalità per l'analisi statica dei programmi attraverso la flag \textit{-fanalyzer}.
         \item Similarmente a GCC come terzo viene scelto il compilatore Clang che attraverso un suo tool chiamato Clang-Check è in grado di effettuare analisi statiche.
     \end{itemize}
 Non sono invece stati usati analizzatori dinamici, questo perché il loro utilizzo in modo automatizzato è un operazione complicata se non quasi impossibile. 
 Infatti quasi tutti i programmi prendono o dei parametri all'esecuzione o degli input durante l'esecuzione, ma fornire questi dati in modo consistente e sensato per il programma e in modo automatizzato rende il tutto veramente difficile.
 
 L'utilizzo di essi però potrebbe portare a risultati molto interessanti poiché parte dei falsi positivi degli analizzatori statici deriva dal non poter decidere se frammenti di programmi sono o non sono eseguiti e quindi gli analizzano tutti, ma quello che può succedere
-è che se in un frammento di programma che non viene sicuramente mai eseguito c'è un errore, l'analizzatore statico lo riferisce quello dinamico, correttamente, no.
+è che se in un frammento di programma che non viene sicuramente mai eseguito c'è un errore, l'analizzatore statico lo riferisce mentre quello dinamico, correttamente, no.
 
-%. La maggior parte degli analizzatori statici infatti
+
+\section{Utilizzo efficace di processori multicore}
+Prima di illustrare i passaggi della generazione del dataset va discusso del tempo.
+Vista la mole di progetti e le loro dimensioni non irrilevanti se eseguissimo in modo \textit{naive} la generazione del dataset avremmo tempi di analisi che possono estendersi anche a periodi di giorni.
+Dal momento che il processore utilizzato per la generazione del dataset è un processore multicore è stato deciso di ridurre i tempi di esecuzione delle fasi della generazione sfruttando ciò.
+Python attraverso la sua libreria \textit{multiprocessing} permette infatti di eseguire il processo in più processi diversi, andando a ridurre drasticamente il tempo delle operazioni.
+Quindi tutte le operazioni di seguito descritte, anche non facendone più menzione, saranno eseguite in questa maniera.
+
+\section{Prima fase: generazione dei report degli errori}
+La prima fase della generazione del dataset consiste quindi nell'utilizzare i tre analizzatori scelti per generare ulteriori report degli errori. 
+In particolare vengono svolte le seguenti operazioni:
+    \begin{itemize}
+      \item Per eseguire l'analizzatore di GCC vengono prima raccolti tutti i file sorgenti del progetto, cioè tutti quei file che terminano con ".c", ".cpp" o ".h". Una volta fatto ciò viene eseguito il seguente comando:
+            \begin{lstlisting}[language=bash]
+              $ gcc -fanalyzer -Wall <files> 2> gcc-bugs.txt
+            \end{lstlisting}
+            Il prodotto di questo comando sarà un unico file contente tutti gli errori e la loro posizione indicata con il percorso relativo del file e il numero sia della riga sia della colonna.
+      \item Clang-check invece può essere eseguito su una cartella e quindi si occupa lui di trovare i file da analizzare.
+             Non viene però utilizzato in questa modalità perché nel file di output finale al posto del percorso relativo dei file viene utilizzato solo il nome di questo, ma può succedere che in progetti grandi si abbiano file chiamati uguali ma in cartelle diverse.
+             Per risolvere questo problema viene eseguito individualmente su ogni file tramite il comando:
+            \begin{lstlisting}[language=bash]
+              $ clang-check --analyze -p compile_commands.json <file>
+            \end{lstlisting}
+            %forse togliere non ha molto senso
+            Come si può notare utilizza un file chiamato compile commands.json che è il file che è requisito per certi analizzatori statici, come già detto nella \autoref{subsec:compile_database}.
+            Gli output generati dall'esecuzione di questi comandi vengono poi processati andando a sostituire i nomi dei file con il loro percorsi relativi, e poi aggregati tutti insieme. 
+      \item Per finire viene poi eseguito cppcheck che invece non ha bisogno di nessun aggiustamento e si può eseguire direttamente su tutto il progetto con il seguente comando:
+              \begin{lstlisting}[language=bash]
+                $ cppcheck . --output-file=cppcheck-bugs.txt
+              \end{lstlisting}
+    \end{itemize}
+
+
+\section{Seconda fase: aggregazione dei report degli errori}
+Dopo la prima fase descritta nella sezione precedente avremo come risultato quattro report di errori in file separati. Questi report si distinguono per due caratteristiche principali: la struttura del file e la nomenclatura degli errori. 
+Per poter andare ad'utilizzare questi risultati, e fare quindi l'aggregazione di essi, dovremo effettuare due trasformazioni: un \textit{parsing} e una \textit{normalizzazione}.
+
+
+\subsection{Parsing dei report}
+Il \textit{parsing} è l'analisi di un dato in forma testuale per identificarne le sue componenti principali dove, in questo caso, sono la tipologia di errore e la sua posizione. 
+Nel nostro caso è possibile eseguire il parsing tramite delle specifiche \textit{regex} che, avendo diversi formati di file, saranno diverse per ognuno degli analizzatori.
+Il risultato del parsing sono quindi tanti record nella forma \record{errore, posizione}, dove la posizione indica sia il percorso del file ma sia anche la riga e la colonna dell'errore.
+
+\subsection{Normalizzazione}
+Per \textit{normalizzazione} si intende il processo di uniformare ad'un unico spazio di valori i dati forniti. Questo fase è fondamentale poiché i vari analizzatori forniscono lo stesso tipo di errore sotto nomi diversi. 
+Per fare un esempio possiamo guardare la \autoref{tab:nomenclature} che riassume le diverse nomenclature per il tipo di errore 'memory leak'. 
+
+\vskip1cm
+    \noindent\setlength\tabcolsep{4pt}%
+    \begin{tabularx}{\linewidth}{|l|c|*{4}{>{\RaggedRight\arraybackslash}X|}}
+      \hline
+      Forma normalizzata & Infer & Clang & Cppcheck & GCC \\ [0.5ex]
+      \hline
+      Memory leak  &  MEMORY\_LEAK  & unix.Malloc, ... & memleak, memleakOnRealloc, ... &  Wanalyzer-malloc-leak\\
+      \hline
+    \end{tabularx} 
+    \captionof{table}{Tabella delle diverse nomenclature per l'errore 'memory leak'} \label{tab:nomenclature}
+\vskip1cm
+
+Notiamo un concetto fondamentale: analizzatori diversi producono analisi a granularità diverse. 
+Si può osservare granularità maggiore da parte di Cppcheck e Clang nella \autoref{tab:nomenclature}, infatti tutti e due definiscono più tipologie di errori che però, per convezione di questo progetto, vengono raggruppate in un'unica macro categoria.
+Al contrario ci sono invece casi in cui un analizzatore non ha granularità sufficiente per distinguere fra due categorie di errori, in questo caso un errore di quel tipo viene normalizzato in un errore per ogni categoria che potrebbe rappresentare, si può vedere ciò nella \autoref{tab:granularità}. 
+
+\begin{center}
+  \begin{tabular}{|c|c|}
+    \hline
+    Forma normalizzata & Clang  \\
+    \hline
+    Memory leak  &  unix.Malloc, ... \\
+    \hline
+    Use after free & unix.Malloc, ... \\
+    \hline
+  \end{tabular}
+  \captionof{table}{Tabella che mostra come un determinato errore di un analizzatore potrebbe corrispondere a più forme normalizzate} \label{tab:granularità}
+\end{center} 
+
+%vengono definiti più errori, nella stessa posizione, per ogni categoria che potrebbe rappresentare quell'errore.
+
+\subsection{Aggregazione dei report}
+Una volta definite le trasformazioni da effettuare possiamo introdurre l'effettivo argomento di questa sezione, cioè l'aggregazione dei quattro file prodotti dagli analizzatori.
+Il processo di aggregazione permette di generare un unico report finale degli errori, andando a prendere soltanto quelli che sono stati individuati da almeno $n$ analizzatori. 
+Modificando il parametro $n$ andremo, di conseguenza, a modificare la precisione e la dimensione del dataset nel seguente modo:
+  \begin{itemize}
+    \item Ponendo $n=1$ avremo la dimensione massima del dataset, in cui ogni singolo errore riportato viene mantenuto, a scapito però di un numero di falsi positivi più grande.
+          Notiamo comunque, e questo vale per tutti i valori di $n$, che nel caso di duplicati ne viene sempre inserito solo uno.
+    \item Ponendo $n=2$ avremo un bilanciamento fra precisione e dimensione del dataset. Infatti come è stato notato empiricamente è alquanto raro che più di due degli analizzatori individuino un specifico errore,
+          quindi con $n=2$ manterremo comunque un sufficiente numero di dati migliorandone però la precisione.
+    \item Ponendo $n>2$ invece il numero di errori diventa così basso che renderebbe difficile addestrare una rete, il numero però di falsi positivi diminuisce sicuramente.
+  \end{itemize}
+
+Nel caso di questo lavoro sono stati utilizzati dataset sia derivanti dal porre $n=1$ sia dal porre $n=2$.
+  %TODO aggiungere grafico
 
 
 %\subsection{Fase 1: utilizzo di analizzatori statici per la generazione di report di errori}
