@@ -19,8 +19,12 @@
 
 \usepackage{listings}
 
+
 %Per tabelle
 \usepackage{caption, tabularx, ragged2e, array}
+
+%Per i plot
+\usepackage{pgfplots}
 
 %Gestione degli alberi delle strutture delle cartelle
 \usepackage{forest}
@@ -64,8 +68,22 @@
 \newcommand{\DS}{\textit{Dataset}}
 \newcommand{\ds}{\textit{dataset}}
 
+%Comando per mettere le angle bracket e minore e maggiore
+\newcommand{\<}{\textless}
+%\newcommand{\>}{\textgreater}
+
+\newcommand{\anglebra}[1]{\textlangle{#1}\textrangle}
+
+%Comando per typesettare comandi
+\newcommand{\command}[1]{\[\$ \; \textit{#1}\]}
+\newcommand{\args}[1]{\textless #1\textgreater}
+
 %Comandi per i record di dati
-\newcommand{\record}[1]{\textlangle\textit{#1}\textrangle }
+\newcommand{\record}[1]{\anglebra{\textit{#1}}}
+
+
+  
+
 
 %Comando per il referecing di capitoli
 \NewDocumentCommand{\chapref}{s m}{Chapter~\ref{#2}\IfBooleanF{#1}{ \nameref{#2}}}
