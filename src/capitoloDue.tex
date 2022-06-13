@@ -235,7 +235,7 @@ Modificando il parametro $n$ andremo, di conseguenza, a modificare la precisione
 Si può vedere in modo più chiaro come al variare del valore di $n$ cambi il numero di errori ottenuti in \autoref{fig:grafo_aggregazione}.
 Nel caso di questo lavoro sono stati utilizzati dataset sia derivanti dal porre $n=1$ sia dal porre $n=2$.
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \begin{tikzpicture}
     \begin{axis}[
@@ -269,8 +269,71 @@ Nel caso di questo lavoro sono stati utilizzati dataset sia derivanti dal porre 
     \label{fig:grafo_aggregazione}
 \end{figure}
 
-\section{Fase due: associazione tra errore e codice}
-Lo scopo di questa fase è quello di mappare la posizione di ogni singolo errore ad'un determinato \textit{code snippet}.  
+\section{Terza fase: associazione tra errore e codice}
+Lo scopo di questa fase è quello di mappare la posizione di ogni singolo errore ad'un determinato \textit{code snippet}. 
+Prima di far ciò va definito però a che livello eseguire le analisi e quindi le successive predizioni del modello.
+Le possibili strade che si possono intraprendere possono essere:
+  \begin{itemize}
+    \item A livello di file. Facendo ciò dato un errore il \textit{code snippet} che associamo è il codice sorgente del intero file. 
+          Fare ciò ha due vantaggi principali: la semplicità e la quantità d'informazioni codificate. 
+          Ha però anche una serie di svantaggi: per il modello potrebbe essere troppo dispersivo per file grandi e dal momento che un singolo file è probabile che contenga più errori il modello dovrebbe restituire sequenze di predizioni.
+    \item A livello di funzione. In questo caso si associa all'errore il blocco della funzione che lo racchiude.
+          Il beneficio di ciò è la riduzione drastica del frammento di codice associato ad'un errore, rendendo più chiare le relazioni tra i vari elementi del codice e il tipo di errore.
+    \item A livello di riga, in cui ad'un dato errore associamo come code snippet solo la riga stessa. In questo caso la dispersione sarà minima ma allo stesso tempo lo sarà la quantità d'informazioni a disposizione.
+  \end{itemize}
+
+In \autoref{fig:trade_off} possiamo notare il \textit{trade-off} che avviene tra l'aumentare della dimensione del code snippet e la quantità d'informazioni da esso esprimibile. 
+
+Nel lavoro svolto è stato scelto di eseguire analisi a livello di funzione, andando però ad aumentare il quantitativo d'informazioni a disposizione aggiungendo un contesto della funzione stessa.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        xlabel={Quantita di informazioni},
+        ylabel={Dispersività},
+        yticklabels={,,},
+        xticklabels={,,},
+        xmin=0,    xmax=3,
+        ymin=0,    ymax=3,
+        axis line style={->},
+        legend pos=south east
+    ]
+        \addplot[color=blue,domain=0:2,smooth, samples=400]{x^2};
+        \addplot +[mark=none, color=red] coordinates {(1,0) (1, 10)};
+        \addplot +[mark=none, color=red] coordinates {(0,1) (10, 1)};
+    \end{axis}
+    %
+  \end{tikzpicture}
+  \caption{\textit{Trade-off} che avviene tra la dispersività e la quantità di informazioni. Selezionando tanto codice avremo tante informazioni ma anche la dispersività aumentata, mentre selezionandone poco avremo poca dispersività ma potremmo perdere informazioni chiave.
+    Le due linee rosse indicano un punto di bilanciamento tra i due.
+  }
+  \label{fig:trade_off}
+\end{figure}
+
+\subsection{Alberi di sintassi astratta}
+
+\subsubsection{Parsing degli AST}
+
+
+\subsection{Estrazione del codice della funzione}
+
+
+\subsection{Estrazione del contesto della funzione}
+
+\subsubsection{Riferimenti a variabile e funzioni esterne}
+
+\subsubsection{Riferimenti a tipi esterni}
+
+
+\section{Quarta fase: Generazione degli AST-context}
+
+\subsection{AstMiner}
+
+\subsection{Generazioni vocabolari per i token e per i path}
+
+
+
 
 
 %\subsection{Fase 1: utilizzo di analizzatori statici per la generazione di report di errori}
