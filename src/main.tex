@@ -78,6 +78,31 @@
 \newcommand{\command}[1]{\[\$ \; \textit{#1}\]}
 \newcommand{\args}[1]{\textless #1\textgreater}
 
+%Comando per typesettare codice
+
+\newcounter{code}
+\renewcommand{\lstlistingname}{Snippet}
+\lstdefinestyle{verbo}{  % code typesetting optins
+    basicstyle=\small\ttfamily,
+    breaklines=true,
+    numbers=left,
+    breakatwhitespace=true,
+    language=Python,
+    tabsize=1,
+    resetmargins=true,
+    xleftmargin=0pt,
+    frame=single,
+    showstringspaces=false
+}
+\lstnewenvironment{code}[1][]
+ {\lstset{style=verbo,#1}}
+ {}
+
+%Comandi per la generazione di grafi
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
+
 %Comandi per i record di dati
 \newcommand{\record}[1]{\anglebra{\textit{#1}}}
 

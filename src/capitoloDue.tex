@@ -79,7 +79,7 @@ Come si può notare ogni progetto contiene anche un Makefile, elemento fondament
 %\subsection{Analizzatori utilizzati}
 
 \section{Analizzatori di codice statici}
-Un'analizzatore di codice è un programma che prende in input uno o più file e genera un report degli errori, cioè una lista di coppie del tipo $<$Errore, Posizione$>$. Di questi analizzatori ne esistono due macro categorie: statici e dinamici. 
+Un'analizzatore di codice è un programma che prende in input uno o più file e genera un report degli errori, cioè una lista di coppie del tipo $<$Errore, Posizione$>$, spesso in forma di file testuale. Di questi analizzatori ne esistono due macro categorie: statici e dinamici. 
 Gli analizzatori statici sono programmi che effettuano controlli solo sul codice a livello testuale e che quindi non eseguono in nessuna maniera il codice. Gli analizzatori dinamici sono invece analizzatori più complessi che effettuano controlli a \textit{run-time}
 andando quindi ad'eseguire il codice stesso.
 
@@ -272,9 +272,9 @@ Nel caso di questo lavoro sono stati utilizzati dataset sia derivanti dal porre 
 \section{Terza fase: associazione tra errore e codice}
 Lo scopo di questa fase è quello di mappare la posizione di ogni singolo errore ad'un determinato \textit{code snippet}. 
 Prima di far ciò va definito però a che livello eseguire le analisi e quindi le successive predizioni del modello.
-Le possibili strade che si possono intraprendere possono essere:
+Le possibili strade che si possono intraprendere sono:
   \begin{itemize}
-    \item A livello di file. Facendo ciò dato un errore il \textit{code snippet} che associamo è il codice sorgente del intero file. 
+    \item A livello di file. Facendo ciò, dato un errore il \textit{code snippet} che associamo è il codice sorgente del intero file. 
           Fare ciò ha due vantaggi principali: la semplicità e la quantità d'informazioni codificate. 
           Ha però anche una serie di svantaggi: per il modello potrebbe essere troppo dispersivo per file grandi e dal momento che un singolo file è probabile che contenga più errori il modello dovrebbe restituire sequenze di predizioni.
     \item A livello di funzione. In questo caso si associa all'errore il blocco della funzione che lo racchiude.
@@ -282,11 +282,12 @@ Le possibili strade che si possono intraprendere possono essere:
     \item A livello di riga, in cui ad'un dato errore associamo come code snippet solo la riga stessa. In questo caso la dispersione sarà minima ma allo stesso tempo lo sarà la quantità d'informazioni a disposizione.
   \end{itemize}
 
-In \autoref{fig:trade_off} possiamo notare il \textit{trade-off} che avviene tra l'aumentare della dimensione del code snippet e la quantità d'informazioni da esso esprimibile. 
+In \autoref{fig:trade_off} possiamo notare il \textit{trade-off} che avviene tra l'aumentare della dimensione del code snippet e la quantità d'informazioni da esso incapsulata. 
 
-Nel lavoro svolto è stato scelto di eseguire analisi a livello di funzione, andando però ad aumentare il quantitativo d'informazioni a disposizione aggiungendo un contesto della funzione stessa.
+Nel lavoro svolto è stato scelto di eseguire le analisi a livello di funzione, andando però ad aumentare il quantitativo d'informazioni a disposizione aggiungendo un contesto della funzione stessa. 
+Facendo questa scelta inoltre è possibile approssimare il problema ipotizzando che in una data funzione ci sia massimo un solo errore, rendendo quindi l'architettura del modello finale più semplice.
 
-\begin{figure}[h]
+\begin{figure}
   \centering
   \begin{tikzpicture}
     \begin{axis}[
@@ -294,14 +295,14 @@ Nel lavoro svolto è stato scelto di eseguire analisi a livello di funzione, and
         ylabel={Dispersività},
         yticklabels={,,},
         xticklabels={,,},
-        xmin=0,    xmax=3,
-        ymin=0,    ymax=3,
+        xmin=0,    xmax=2,
+        ymin=0,    ymax=2,
         axis line style={->},
         legend pos=south east
     ]
-        \addplot[color=blue,domain=0:2,smooth, samples=400]{x^2};
-        \addplot +[mark=none, color=red] coordinates {(1,0) (1, 10)};
-        \addplot +[mark=none, color=red] coordinates {(0,1) (10, 1)};
+        \addplot[color=blue,domain=0:2,smooth, samples=400]{exp(x)-1};
+        \addplot +[mark=none, color=red, dashed] coordinates {(0.5,0) (0.5, 0.649)};
+        \addplot +[mark=none, color=red, dashed] coordinates {(0,0.649) (0.5, 0.649)};
     \end{axis}
     %
   \end{tikzpicture}
@@ -311,19 +312,161 @@ Nel lavoro svolto è stato scelto di eseguire analisi a livello di funzione, and
   \label{fig:trade_off}
 \end{figure}
 
+Il problema che ci poniamo adesso è quindi quello di estrarre il codice di una funzione (e in più il suo contesto) dato il numero della riga dell'errore. 
+Per risolvere ciò dobbiamo prima di tutto discutere di un concetto fondamentale: gli alberi di sintassi astratta (o in breve \textit{ast}).
+
+\pagebreak
+
 \subsection{Alberi di sintassi astratta}
+Un albero di sintassi astratta, o in breve \textit{ast} (dall'inglese abstract syntax tree), è una rappresentazione ad albero della struttura sintattica astratta di un testo, nel nostro caso del codice sorgente.
+Queste strutture sono spesso generate da parser specifici e vengono utilizzati come rappresentazione intermedia del programma in un processo di compilazione.
 
-\subsubsection{Parsing degli AST}
+Possiamo vedere un esempio di albero prendendo il frammento di codice nello \autoref{code:esempio} scritto in uno pseudo-linguaggio.
+Un possibile albero di sintassi astratta per questo frammento di codice è quello indicato in \autoref{fig:ast_esempio}.
+Come si può vedere l'ast rappresenta in modo efficace la struttura completa del codice, andando ad'individuare e distinguere elementi come:
+  \begin{itemize}
+    \item Il corpo, la \textit{signature} e il valore di ritorno della funzione. 
+    \item La dichiarazione della variabile 'total' e il blocco del for.
+    \item I componenti del costrutto for: il corpo, la condizione, l'inizializzazione e lo step della variabile di controllo.
+  \end{itemize}
+
+  \begin{code}[caption={Frammento di codice che calcola la somma dei valori in un vettore}, label={code:esempio}]
+    void foo(int[] array){
+      int totale = 0;
+      for(int i = 0; i < array.length; i++){
+        totale = totale + array[i]
+      }
+      return totale
+    }
+  \end{code}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.5]{images/astEsempio.png}
+  \caption{Esempio di albero di sintassi astratta}
+  \label{fig:ast_esempio}
+\end{figure}
+
+In questo progetto verranno utilizzati gli alberi di sintassi astratta per poter estrarre correttamente il codice della funzione che rinchiude l'errore. 
+Questa operazione poteva anche essere fatta a livello testuale ricercando le parentesi graffe di apertura e chiusura della funzione. 
+In questa maniera però sorgono casi problematici come l'utilizzo di parentesi graffe all'interno di commenti e/o stringhe che vanno ignorati o l'utilizzo particolare di direttive \textit{define}.
+Tutto ciò rende il problema in apparenza semplice in realtà complesso.
+A supporto di ciò vediamo lo \autoref{code:esempio_codice_complesso} in cui, nonostante sia codice \CPP{} completamente valido, l'individuazione del corpo della funzione che racchiude la linea di errore è un operazione tutt'altro che semplice.
+
+\begin{code}[language=c++, caption={Esempio di codice valido con struttura particolare}, label={code:esempio_codice_complesso}]
+  #DEFINE OPENBRACKET {
+  #DEFINE CLOSEBRACKET }
+  void foo()OPENBRACKET
+    int error = 5 / 0; // Linea contente l'errore
+
+    /* Questo commento rende difficile l'individuazione del corpo della funzione }
+    */
+
+  CLOSEBRACKET
+\end{code}
+
+\subsection{Generazione e parsing degli AST}
+Come accennato nella precedente sezione in questo lavoro vengono utilizzati gli ast come metodo per estrarre i blocchi delle funzioni e il loro relativo contesto.
+Prima di tutto bisogna essere in grado di generare un albero di sintassi astratta dato un file sorgente.
+Per far ciò viene utilizzato il compilatore Clang che, attraverso flag specifiche, è in grado di generare un albero rappresentato in formato JSON.
+Più in particolare per ogni file sorgente che vogliamo analizzare viene eseguito il seguente comando:
+  \command{
+    clang -Xclang -ast-dump=json \args{file}
+  }
+Il risultato di questa operazione è un file in formato JSON che rappresenta la struttura dell'albero. Prima però di proseguire questo file viene caricato e trasformato in una struttura ad albero vera e propria.
+
+Oltre alla struttura sintattica del codice all'interno dei dizionari JSON sono presenti informazioni ulteriori come: indicazioni sulla riga degli elementi, sui tipi, sui riferimenti esterni e molto altro.
+Tutte queste informazioni vengono poi usate sia per estrarre il codice ma sia per estrarre il contesto della funzione. 
+
+\subsection{Contesto di una funzione}
+Definiamo in fine cosa si intende con contesto di una funzione.
+Il contesto di una funzione è l'insieme di tutti quei riferimenti esterni che vengono effettuati all'interno del corpo della funzione stessa, possono includere quindi:
+  \begin{itemize}
+    \item Funzioni esterne.
+    \item Variabili esterne.
+    \item Definizioni di tipo esterne. Visto che le definizioni di tipo possono dipendere da altri tipi non primitivi, in questo caso, oltre al riferimento stesso vengono aggiunte anche le dipendenze di esso.
+  \end{itemize}
+L'idea posta alla base dell'includere questo contesto nel risultato finale è il poter dare al modello il maggior numero d'informazioni possibili mantenendo comunque limitata la dimensione dello snippet.
+Senza di questo infatti, anche un umano, potrebbe non essere in grado di comprendere il codice o non poterne trarre conclusioni significative su di esso. 
+Guardando infatti lo \autoref{code:esempio_codice_grafo_dipendenze}, senza l'inclusione nel risultato finale della variabile globale non potremmo determinare che nella funzione \textit{foo} ci sia effettivamente un errore di divisione per zero.
+
+\begin{code}[language=c++, caption={Esempio di codice da cui ricavare dipendenze esterne }, label={code:esempio_codice_grafo_dipendenze}]
+
+  typedef int typeA;
+  typedef typeA typeB; 
+
+  typedef float typeC;
+
+  int variabileGlobale = 0;
+
+  int bar(){
+    ...
+  }
+
+  void foo(){
+    typeB variable = 1; //riferimento di tipo esterno
+    int var = 5 / variabileGlobale // errore
+    
+    result = bar();
+    ...
+  }
+
+\end{code}
+
+\subsubsection{Estrazione del contesto}\label{sec:estrazione_contesto}
+Per l'estrazione del contesto vengono utilizzate le informazioni codificate nell'albero di sintassi astratta prodotto da Clang.
+Solamente per le definizioni di tipo vengono anche incluse le relative dipendenze e per far ciò viene costruito un grafo delle dipendenze.
+
+Il grafo delle dipendenze è un grafo diretto in cui un vertice $v$ rappresenta una dichiarazione di tipo mentre un arco $(u,v)$ rappresenta la dipendenza del tipo $u$ dal tipo $v$.
+Prendiamo come esempio lo \autoref{code:esempio_codice_grafo_dipendenze}. 
+Il contesto della funzione \textit{foo} in questo caso dovrà mantenere informazioni sulla definizione di \textit{typeB} che però dipende dalla definizione del \textit{typeA}.
+Bisogna quindi costruire il grafo delle dipendenze dei tipi utilizzando le informazioni contenute all'interno dell'albero di sintassi astratta.
+Possiamo vedere quindi il grafo delle dipendenze per questo specifico frammento di codice in \autoref{fig:grafo_dipendenze}.
 
 
-\subsection{Estrazione del codice della funzione}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \tikzset{vertex/.style = {shape=circle,draw,minimum size=1.5em}}
+    \tikzset{edge/.style = {->,> = latex'}}
+  
+    % vertices
+  \node[vertex] (typeB) at  (0,0) {typeB};
+  \node[vertex] (typeA) at  (4,0) {typeA};
+  \node[vertex] (int) at  (8,0) {int};
+  \node[vertex] (typeC) at (2, -2) {typeC};
+  \node[vertex] (float) at (6, -2) {float};
+  %edges
+  \draw[edge] (typeB) to (typeA);
+  \draw[edge] (typeA) to (int);
+  \draw[edge] (typeC) to (float);
+  \end{tikzpicture}
+  \caption{Grafo delle dipendenze di tipo per lo \autoref{code:esempio_codice_grafo_dipendenze}}
+  \label{fig:grafo_dipendenze}
+\end{figure}
+
+Per poter ricavare quindi, una volta costruito il grafo delle dipendenze, le dipendenze delle dichiarazioni di tipo si può eseguire una visita in ampiezza partendo dal riferimento esterno stesso.
+Nel caso della funzione \textit{foo} otterremo quindi, visto il riferimento esterno al tipo \textit{typeB}, due definizioni di tipo, quelle di \textit{typeB} e \textit{typeA}.  
+
+\subsection{Esempio di risultato finale}
+Riprendendo sempre lo \autoref{code:esempio_codice_grafo_dipendenze} avremo che il risultato finale dell'estrazione del metodo \textit{foo} è il seguente:
 
 
-\subsection{Estrazione del contesto della funzione}
+\begin{code}[language=c++, caption={Esempio di estrazione del codice della funzione foo insieme al contesto}, label={code:esempio_finale}]
 
-\subsubsection{Riferimenti a variabile e funzioni esterne}
+  typedef int typeA;
+  typedef typeA typeB; 
+  int variabileGlobale = 0;
+  int bar();
+  void foo(){
+    typeB variable = 1; //riferimento di tipo esterno
+    int var = 5 / variabileGlobale // errore
+    ...
+  }
 
-\subsubsection{Riferimenti a tipi esterni}
+\end{code}
+
+Notiamo quindi che la definizione del tipo \textit{typeC} non è inclusa poiché non utilizzata all'interno del corpo della funzione, mentre sia la variabile globale sia le due definizioni di tipo e sia la signature della funzione \textit{bar} sono incluse nel contesto.
 
 
 \section{Quarta fase: Generazione degli AST-context}
