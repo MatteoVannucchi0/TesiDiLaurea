@@ -1,8 +1,178 @@
-\chapter{Modello vero e proprio}\label{chap:modello}
+\chapter{Il modello predittivo}\label{chap:modello}
+Nel seguente capitolo affronteremo lo sviluppo del modello predittivo. 
+Vedremo, prima di tutto, la struttura del modello discutendone i principali componenti e varie iterazioni di essa.  
+In un secondo momento vedremo un problema fondamentale dato dalla distribuzione del dataset: il problema dello sbilanciamento.
+Verrà anche introdotto brevemente come viene addestrato e le metriche utilizzato per valutarlo.
+Infine saranno discussi i risultati ottenuti. 
+
+\section{Struttura}
+Come già introdotto nel \autoref{chap:introduzione_teorica}, questo modello si basa su un meccanismo di codifica del codice separato in due fasi:
+    \begin{itemize}
+        \item La prima codifica del \textit{code snippet} in un vettore di \textit{ast contexts}, effettuata a tempo di creazione del dataset, come già discusso nel \autoref{chap:dataset}.
+        \item La seconda codifica del vettore di \textit{ast contexts} in un vettore di \textit{feature} attraverso meccanismi di \DL.
+    \end{itemize}
+Una volta ottenuto il vettore delle feature, vengono utilizzati due 'sotto reti' per la classificazione e la regressione. 
+Possiamo vedere riassunta a grandi linee la struttura della rete in \autoref{fig:struttura}.
+
+\begin{figure}[h]
+    \centering
+    \scalebox{0.8}{
+        \begin{tikzpicture}[block/.style={draw, rectangle, minimum height=1cm}]
+            \tikzset{vertex/.style = {shape=circle,draw,minimum size=1.5em}}
+            \tikzset{edge/.style = {->,> = latex'}}
+            
+            \node[block] (input) at (0,0) {input};
+            \node[block] (code2vec) at (4,0) {code2vec};
+
+            \node[block] (classificazione) at (8, 2) {classificazione};
+            \node[block] (regressione) at (8, -2) {regressione};
+            
+            \draw [edge] (input) to (code2vec);
+            \draw [edge] (code2vec) to (classificazione);
+            \draw [edge] (code2vec) to (regressione);
+            
+            \end{tikzpicture}
+        }
+      \caption{Struttura astratta del modello utilizzato}
+      \label{fig:struttura}
+\end{figure}
+
+
+\begin{figure}[h]
+    \centering
+    \scalebox{0.8}{
+        \begin{tikzpicture}[block/.style={draw, rectangle, minimum height=1cm}]
+            \tikzset{vertex/.style = {shape=circle,draw,minimum size=1.5em}}
+            \tikzset{edge/.style = {->,> = latex'}}
+
+            \node[vertex] (xs0) at (0,3) {$x_s^0$};
+            \node[vertex] (p0) at (0,1) {$p^0$};   
+            \node[vertex] (xt0) at (0,-1) {$x_t^0$};
+            
+            \node at (1,3) {...};
+            \node at (1,1) {...};
+            \node at (1,-1) {...};
+
+
+            \node[vertex] (xsc) at (2,3) {$x_s^c$};
+            \node[vertex] (pc) at (2,1) {$p^c$};   
+            \node[vertex] (xtc) at (2,-1) {$x_t^c$};
+
+
+            \node[vertex] (mask) at (1,-3) {$m$};
+
+
+            \node[vertex] (xs) at (4,3) {$x_s$};
+            \node[vertex] (p) at (4,1) {$p$};   
+            \node[vertex] (xt) at (4,-1) {$x_t$};
+
+
+
+            \node[block] (classificazione) at (15, 2) {classificazione};
+            \node[block] (regressione) at (15, -2) {regressione};
+
+            \node (input) at(3.5,0) {};
+
+            \node[rectangle, draw,dotted,red, ultra thick,label={[red]code2vec}, minimum width=6cm,
+            minimum height = 2cm] at(8,0) (code2vec) {};
+
+            \draw  [decorate,decoration={brace,amplitude=10pt}] (2.75,3.5) -- (2.75,-1.5) node (vec) [black,midway,xshift=0.4cm, yshift=1.8cm, label={[rotate=-90]right:contexts vector}] {};
+            
+            \node [fit=(xs0) (p0) (xt0) (mask) (xsc) (pc) (xtc),draw,dotted,blue, thick,label={[blue]input}] {};
+            %\node [fit=(code2vec) (vector),draw,dotted,red, ultra thick,label={[red]code2vec}] (code2vec) {};
+            \node [fit=(classificazione) (regressione),draw,dotted,orange, ultra thick,label={[orange]predizione}] {};
+        
+            \draw[edge] (code2vec) to (classificazione);
+            \draw[edge] (code2vec) to (regressione);
+
+            \draw[edge] (input) to (code2vec);
+            \end{tikzpicture}
+        }
+      \caption{Struttura del modello utilizzato}
+      \label{fig:struttura}
+\end{figure}
+
+
+Nelle successive sezione, in maniera approfondita, le seguenti tematiche:
+    \begin{itemize}
+        \item La struttura degli input e come sono stati gestiti i cambiamenti della loro forma discussi in precedenza nel \autoref{chap:dataset}.
+        \item La struttura del modello di classificazione.
+        \item La struttura del modello di regressione.
+    \end{itemize}
+
+
+\subsection{Struttura degli input}
+Il dataset generato nel \autoref{chap:dataset} contiene per ogni suo elemento un vettore di \textit{ast contexts}, cioè un vettore di triple della forma:
+    \[(x_s, p, x_t)\]
+tali per cui vale la seguente relazione:
+    \[x_s, x_t \in \mathbb{N}^{l} \quad p \in \mathbb{N}^{k}\]
+dove $l$ e $k$ rappresentano rispettivamente la lunghezza massima del vettore dei token di inizio/fine e la lunghezza massima del vettore dei cammini, fissate al momento della creazione del dataset (nel nostro caso $l=10$ e $k=20$).
+Per poter essere inserito all'interno di un modello dobbiamo 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Come si può vedere nella \autoref{fig:struttura} l'input è formato da quattro vettori diversi:
+    \begin{itemize}
+        \item La tripla $(x_s, p, x_t)$ che rappresenta l'\textit{ast context}, tale per cui:
+            \[x_s, x_t \in \mathbb{N}^{c \times l}, \quad p \in \mathbb{N}^{c \times k}\]
+        dove $l$ e $k$ rappresentano rispettivamente la lunghezza massima del vettore dei token di inizio/fine e la lunghezza massima del vettore dei cammini (fissate al momento della creazione del dataset).
+        , mentre $c$ rappresenta il numero di massimo \textit{ast context} per ogni dato del dataset.
+        Succede spesso che i vettori non siano di lunghezza sufficiente, in questi casi vengono aggiunti degli elementi di \textit{padding}
+        tali da raggiungere la lunghezza di $l$ o $k$. Questi elementi di \textit{padding} sono rappresentati da un valore particolare nei rispettivi vocabolari.
+        \item Una vettore maschera $m$ di lunghezza $k$ definito nel seguente modo:
+        \begin{align*}
+                m_i =
+                \begin{cases*}
+                  1 & se $p_i$ non è padding \\
+                  0 & altrimenti
+                \end{cases*}
+        \end{align*}
+        Non è invece definito un vettore maschera per i vettori dei token d'inizio e fine, questo perché l'implementazione avrebbe aumentato di troppo la dimensione della rete.
+    \end{itemize}
+Come già accennato 
+\subsection{Classificazione}
+L'obbiettivo della classificazione in questo modello è il predire la classe di errore o l'assenza di errore. 
+Il modello, di conseguenza, in output dovrà fornire un vettore $c$ tale per cui per ogni $i$:
+\[0 < c_i < 1\]
+avremo quindi che il vettore $c$ è una \textit{distribuzione di probabilità} delle classi da predire.
+Di conseguenza la classe con maggior probabilità sarà la classe predetta. Più formalmente la classe predetta $i$ sarà:
+    \[\argmax_i c_i\]
+Nel lavoro svolto la rete di classificazione è costituita da una serie di \textit{hidden dense layer} culminanti in un \textit{layer} di predizione che utilizza come funzione di attivazione la funzione \textit{softmax}.
+
+
+
+
+\subsection{Predizione di regressione}
+
+
+\subsection{Reshape degli input}
+
+\subsection{Ulteriori architetture del modello provate}
+
+
 \section{Soluzioni allo sbilanciamento del dataset}
     \subsection{Oversampling}
     \subsection{Loss pesata}
-\section{Differenti architetture del modello provate}
 \section{Training}
 \subsection{Metriche utilizzate}
 

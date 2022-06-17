@@ -16,8 +16,9 @@
 \usepackage{xr}
 \usepackage{graphicx}
 \usepackage{caption,subcaption}
-
+\usepackage{amsfonts}
 \usepackage{listings}
+\usepackage{mathtools}
 
 %Spacing del testo
 \usepackage{setspace} 
@@ -109,8 +110,9 @@
 %Comandi per i record di dati
 \newcommand{\record}[1]{\anglebra{\textit{#1}}}
 
-
-  
+%Comando per argmax e min
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
 
 
 %Comando per il referecing di capitoli

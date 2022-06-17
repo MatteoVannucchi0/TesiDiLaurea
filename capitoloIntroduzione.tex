@@ -1,1 +1,88 @@
 \chapter*{Introduzione}
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[block/.style={draw, rectangle, minimum height=1cm}]
+        \tikzset{vertex/.style = {shape=circle,draw,minimum size=1.5em}}
+        \tikzset{edge/.style = {->,> = latex'}}
+      
+        % vertices
+      \node[block] (code) at  (0,0) {code snippets};
+      \node[block] (contexts) at (4,0) {ast contexts};
+      \node[block] (vector) at (8,0) {feature vector}; 
+
+      \node[block] (classificazione) at (12,1) {classificazione};
+      \node[block] (regressione) at (12, -1) {regressione};
+
+     \draw[edge] (vector) to (classificazione);
+     \draw[edge] (vector) to (regressione);
+
+
+
+      \draw[edge] (code) to (contexts);
+
+      \draw (contexts) -- (vector) node (arco) [midway] {};
+
+      \node [fit=(code) (contexts),draw,dotted,red, ultra thick,label={[red]Generazione dataset}] {};
+      \node [fit=(vector) (arco), draw,dotted,orange, ultra thick,label={[orange]Code2Vec}] {};
+      \node [fit=(vector) (classificazione) (regressione) (arco), draw,dotted, blue, ultra thick,label={[blue]Deep learning}] {};
+
+      \end{tikzpicture}
+      \caption{Struttura del modello}
+      \label{fig:struttura_generale}
+    \end{figure}
+
+
+    \begin{figure}[h]
+        \centering
+        \scalebox{0.8}{
+            \begin{tikzpicture}[block/.style={draw, rectangle, minimum height=1cm}]
+                \tikzset{vertex/.style = {shape=circle,draw,minimum size=1.5em}}
+                \tikzset{edge/.style = {->,> = latex'}}
+    
+                \node[vertex] (xs0) at (0,3) {$x_s^0$};
+                \node[vertex] (p0) at (0,1) {$p^0$};   
+                \node[vertex] (xt0) at (0,-1) {$x_t^0$};
+                
+                \node at (1,3) {...};
+                \node at (1,1) {...};
+                \node at (1,-1) {...};
+    
+    
+                \node[vertex] (xsc) at (2,3) {$x_s^c$};
+                \node[vertex] (pc) at (2,1) {$p^c$};   
+                \node[vertex] (xtc) at (2,-1) {$x_t^c$};
+    
+    
+                \node[vertex] (mask) at (1,-3) {$m$};
+    
+    
+                \node[vertex] (xs) at (4,3) {$x_s$};
+                \node[vertex] (p) at (4,1) {$p$};   
+                \node[vertex] (xt) at (4,-1) {$x_t$};
+    
+    
+    
+                \node[block] (classificazione) at (15, 2) {classificazione};
+                \node[block] (regressione) at (15, -2) {regressione};
+    
+                \node (input) at(3.5,0) {};
+    
+                \node[rectangle, draw,dotted,red, ultra thick,label={[red]code2vec}, minimum width=6cm,
+                minimum height = 2cm] at(8,0) (code2vec) {};
+    
+                \draw  [decorate,decoration={brace,amplitude=10pt}] (2.75,3.5) -- (2.75,-1.5) node (vec) [black,midway,xshift=0.4cm, yshift=1.8cm, label={[rotate=-90]right:contexts vector}] {};
+                
+                \node [fit=(xs0) (p0) (xt0) (mask) (xsc) (pc) (xtc),draw,dotted,blue, thick,label={[blue]input}] {};
+                %\node [fit=(code2vec) (vector),draw,dotted,red, ultra thick,label={[red]code2vec}] (code2vec) {};
+                \node [fit=(classificazione) (regressione),draw,dotted,orange, ultra thick,label={[orange]predizione}] {};
+            
+                \draw[edge] (code2vec) to (classificazione);
+                \draw[edge] (code2vec) to (regressione);
+    
+                \draw[edge] (input) to (code2vec);
+                \end{tikzpicture}
+            }
+          \caption{Struttura del modello utilizzato}
+          \label{fig:struttura}
+    \end{figure}

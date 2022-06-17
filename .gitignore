@@ -14,4 +14,9 @@ gen
 *.fls
 *.log
 *.synctex.gz
+*.synctex(busy)
+*.lof
+*.lot
+*.out
+*.toc
 .vscode

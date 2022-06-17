@@ -1,16 +1,17 @@
 \chapter{Dataset}\label{chap:dataset}
 In questo capitolo tratteremo la generazione del dataset posto alla base del modello che andremo a creare poi nel \autoref{chap:modello}. 
-Vederemo prima il dataset originale utilizzato e poi come è stato aumentato tramite l'utilizzo di ulteriori analizzatori statici per migliorarne la precisione delle rilevazioni, andando a ridurre il numero di falsi positivi.
-Verrà poi presentato come le rilevazioni degli analizzatori statici sono utilizzate per la associazione fra un \textit{code snippet} e il relativo errore, poi come da quest'ultimo venga ricavato il codice in formato di \textit{ast context vector}.
+In prima istanza vedremo la versione originale utilizzata e poi come è stata migliorata tramite l'utilizzo di ulteriori analizzatori per aumentarne la precisione delle rilevazioni, riducendone il numero di falsi positivi.
+In un secondo momento verrà esposto come le rilevazioni degli analizzatori statici sono utilizzate per la associazione tra un \textit{code snippet} e il relativo errore, infine come da quest'ultimo venga ricavato il codice in formato di \textit{ast context vector}.
 
 \section{Dataset originale}
-Come detto in precedenza questo dataset non è stato generato partendo da zero, ma facendo riferimento al dataset creato da \cite{gelman2019source}. Il dataset consiste di circa 3000 progetti di GitHub, scritti in linguaggi C e \CPP,
+Come detto in precedenza questo dataset non è stato generato partendo da zero, ma facendo riferimento al dataset creato da \cite{gelman2019source}. Il dataset è composto da circa 3000 progetti di GitHub, scritti in linguaggi C e \CPP,
  che rispettano due requisiti: hanno una licenza ridistribuibile e hanno almeno 10 stelle.
- Il secondo requisito ci serve per garantire che i progetti all'interno del dataset soddisfino dei requisiti di qualità, infatti come precedenti studi hanno mostrato (come ad esempio \cite{papamichail2016user}) si può utilizzare il numero
+ Il secondo requisito serve per garantire che i progetti all'interno del dataset soddisfino degli standard di qualità, infatti come precedenti studi hanno mostrato (come ad esempio \cite{papamichail2016user}) si può utilizzare il numero
  di stelle su GitHub come un \textit{proxy} per la qualità del codice stesso.
 
-Il dataset contiene per ogni progetto una serie di analisi effettuate: l'analisi di Doxygen che estrae le coppie codice-commento e l'analisi di Infer (scrivere che cosa è infer, magari con un footnote) che produce un report di analisi statica degli errori.
-Visto l'utilizzo che ne sarebbe stato fatto di questo dataset, l'analisi di Doxygen è stata scartata. In \autoref{fig:dir_struct} si può vedere la struttura tipica di uno dei circa 3000 progetti presenti.
+Il dataset contiene per ogni progetto una serie di analisi effettuate: l'analisi di Doxygen che estrae le coppie codice-commento e l'analisi di Infer \footnote{Infer è un analizzatore di codice statico} che produce un report di analisi statica degli errori.
+L'analisi di Doxygen è stata scartata, in quanto non utile allo scopo di questo lavoro. In \autoref{fig:dir_struct} si può vedere la struttura tipica di uno dei circa 3000 progetti presenti.
+Come si può notare, ogni directory contiene un Makefile necessario per l'esecuzione corretta di alcuni analizzatori.
 \begin{figure}
     \centering
     \scalebox{0.6}{
@@ -68,7 +69,6 @@ Visto l'utilizzo che ne sarebbe stato fatto di questo dataset, l'analisi di Doxy
     \label{fig:dir_struct}
 \end{figure}
 
-Come si può notare ogni progetto contiene anche un Makefile, elemento fondamentale perché gli analizzatori statici che andremo ad aggiungere spesso richiedono l'esistenza di un Makefile funzionante.
 
 %Figura della struttura delle directory
 
@@ -80,16 +80,15 @@ Come si può notare ogni progetto contiene anche un Makefile, elemento fondament
 
 \section{Analizzatori di codice statici}
 Un'analizzatore di codice è un programma che prende in input uno o più file e genera un report degli errori, cioè una lista di coppie del tipo $<$Errore, Posizione$>$, spesso in forma di file testuale. Di questi analizzatori ne esistono due macro categorie: statici e dinamici. 
-Gli analizzatori statici sono programmi che effettuano controlli solo sul codice a livello testuale e che quindi non eseguono in nessuna maniera il codice. Gli analizzatori dinamici sono invece analizzatori più complessi che effettuano controlli a \textit{run-time}
+Gli analizzatori statici sono programmi che effettuano controlli solo sul codice a livello testuale e che quindi non eseguono in nessuna maniera il codice. Gli analizzatori dinamici sono invece analizzatori più complessi che effettuano controlli a \textit{run-time},
 andando quindi ad'eseguire il codice stesso.
 
-Gli analizzatori non sono però perfetti, infatti nell'insieme degli errori trovati si possono spesso trovare dei falsi positivi, cioè frammenti di codice segnalati come erronei ma che in realtà non presentato nessun tipo di problema. Scopo appunto del dataset aumentato
-è quello di ridurre il numero di falsi positivi.
+Gli analizzatori non sono però perfetti, infatti nell'insieme degli errori trovati si possono spesso trovare dei falsi positivi: frammenti di codice segnalati come erronei che in realtà non presentano nessun tipo di problema.
 
 
 \subsection{Analisi a livello di progetto} \label{subsec:compile_database}
-La maggior parte degli analizzatori statici inoltre è in grado di lavorare a livello di progetti, andando quindi a risolvere correttamente gli \textit{include} (nel caso di C e \CPP), e quindi generando un output più significativo. 
-Alcuni di questi per far ciò hanno bisogno di un file che viene chiamato \textit{compilation database} che mantiene informazioni sulla compilazione dei file del progetto. 
+La maggior parte degli analizzatori statici, inoltre, è in grado di lavorare a livello di progetti, andando a risolvere correttamente gli \textit{include} (nel caso di C e \CPP) e generando un output più significativo. 
+Alcuni di questi, per far ciò, hanno bisogno di un file chiamato \textit{compilation database} che mantiene informazioni sulla compilazione dei file del progetto. 
 Per soddisfare questo requisito esistono strumenti appositi che utilizzano il Makefile per generarlo, nel caso di questo lavoro è stato utilizzato un programma chiamato Bear.
 
 
@@ -99,36 +98,35 @@ Come analizzatori sono stati utilizzati i seguenti quattro:
     \begin{itemize}
         \item L'analizzatore Cppcheck che ha tra i suoi punti di forza il minimizzare il numero di falsi positivi.
         \item GCC che, oltre ad'essere un compilatore, ha anche funzionalità per l'analisi statica dei programmi attraverso il parametro \textit{-fanalyzer}.
-        \item Il compilatore Clang che attraverso un suo tool chiamato Clang-Check è in grado di effettuare analisi statiche.
-        \item L'analizzatore Infer di cui il dataset è già dotato delle analisi per ogni progetto.
+        \item Il compilatore Clang, che attraverso un suo tool chiamato Clang-Check, è in grado di effettuare analisi statiche.
+        \item L'analizzatore Infer il cui dataset è già dotato delle analasi.
     \end{itemize}
-Non sono stati usati analizzatori dinamici, questo perché il loro utilizzo in modo automatizzato è un operazione complicata se non quasi impossibile. 
-Infatti quasi tutti i programmi prendono o dei parametri all'esecuzione o degli input durante l'esecuzione, ma fornire questi dati in modo consistente e sensato per il programma e in modo automatizzato rende il tutto veramente difficile.
+Non sono stati usati analizzatori dinamici, questo perché il loro utilizzo in modo automatizzato è un'operazione estremamente complicata e al di fuori della portata di questo lavoro;
+infatti quasi tutti i programmi prendono dei parametri o degli input durante l'esecuzione, ma fornire questi dati in modo consistente, sensato per il programma e in modo automatizzato è praticamente impossibile.
 
-L'utilizzo di essi però potrebbe portare a risultati molto interessanti poiché parte dei falsi positivi degli analizzatori statici deriva dal non poter decidere se frammenti di programmi sono o non sono eseguiti e quindi gli analizzano tutti.
-Può infatti succedere che se in un frammento di programma che non viene sicuramente mai eseguito c'è un errore, l'analizzatore statico lo riferisce mentre quello dinamico, correttamente, no.
-
+L'utilizzo di essi potrebbe però portare a risultati molto interessanti poiché parte dei falsi positivi degli analizzatori statici deriva dal non poter decidere se frammenti di codice sono o non sono eseguiti e di conseguenza devono analizzarli tutti.
+Può infatti succedere che l'analizzatore statico riferisca errori presenti in codice mai eseguito mentre, in questo caso, quello dinamico, correttamente, non lo riferirebbe.
 
 \section{Utilizzo efficace di processori multicore}
-L'ultimo argomento da discutere prima di illustrare i passaggi della generazione del dataset è il tempo di esecuzione. 
-Vista la mole di progetti e le loro dimensioni non irrilevanti se eseguissimo in modo \textit{naive} la generazione del dataset avremmo tempi di analisi che possono estendersi anche a periodi di giorni.
-Dal momento che il processore utilizzato per la generazione del dataset è un processore multicore è stato deciso di ridurre i tempi di esecuzione delle fasi della generazione sfruttando ciò.
+L'ultimo argomento da discutere prima di illustrare i passaggi della generazione del dataset, è il tempo di esecuzione. 
+Vista la mole di progetti e le loro dimensioni non irrilevanti, se eseguissimo in modo \textit{naive} la generazione del dataset, avremmo tempi di analisi che potrebbero estendersi a periodi di più giorni.
+Dal momento che il processore a disposizione è \textit{multicore}, è stato deciso di ridurre i tempi di esecuzione delle fasi della generazione sfruttando appieno questa caratteristica.
 Python attraverso la sua libreria \textit{multiprocessing} permette infatti di eseguire la computazione in processi diversi, andando a ridurre drasticamente il tempo delle operazioni.
-Quindi tutte le operazioni di seguito descritte, anche non facendone più menzione, saranno eseguite in questa maniera.
+Quindi tutte le operazioni di seguito descritte, anche non facendone più menzione, saranno eseguite in questa modalità.
 
 \section{Prima fase: generazione dei report degli errori}
 La prima fase della generazione del dataset consiste quindi nell'utilizzare i tre analizzatori scelti per generare ulteriori report degli errori, in particolare:
     \begin{itemize}
-      \item Per eseguire l'analizzatore di GCC vengono prima raccolti tutti i file sorgenti del progetto, cioè tutti quei file che terminano con ".c", ".cpp" o ".h". Una volta fatto ciò viene eseguito il seguente comando:
+      \item Per eseguire l'analizzatore di GCC vengono prima raccolti tutti i file sorgenti del progetto, cioè tutti quei file con estensione '.c', '.cpp' o '.h'. Una volta fatto ciò viene eseguito il seguente comando:
             \command{gcc -fanalyzer -Wall \args{files} 2\textgreater  gcc-bugs.txt}
 
-            Il prodotto di questo comando sarà un unico file contente tutti gli errori e la loro posizione indicata con il percorso relativo del file e il numero sia della riga sia della colonna.
-      \item Clang-check invece può essere eseguito su una cartella e quindi si occupa lui di trovare i file da analizzare.
-             Non viene però utilizzato in questa modalità perché nel file di output finale al posto del percorso relativo dei file viene utilizzato solo il nome di questo, ma può succedere che in progetti grandi si abbiano file chiamati uguali ma in cartelle diverse.
+            Il prodotto di questo comando sarà un unico file contenente tutti gli errori e la loro posizione indicata con il percorso relativo del file e il numero sia della riga sia della colonna.
+      \item Clang-check invece può essere eseguito su una cartella occupandosi lui di trovare i file da analizzare.
+             Non viene però utilizzato in questa modalità per una motivazione principale: al posto di utilizzare il percorso assoluto o relativo di un file, clang-check utilizza solamente il nome di questo. Può succedere però che in grandi progetti si abbiano file chiamati uguali ma in cartelle diverse e quindi la loro distinzione sarebbe impossibile.
              Per risolvere questo problema viene eseguito individualmente su ogni file tramite il comando:
               \command{clang-check -{}-analyze -p compile\_commands.json \args{file}}
-            Come si può notare utilizza un file chiamato compile commands.json che è il file che è richiesto da certi analizzatori statici, come già detto nella \autoref{subsec:compile_database}.
-            Gli output generati dall'esecuzione di questi comandi vengono poi processati andando a sostituire i nomi dei file con il loro percorsi relativi, e poi uniti tutti insieme. 
+            Gli output generati dall'esecuzione di questi comandi vengono poi processati andando a sostituire i nomi dei file con il loro percorsi relativi, infine sono uniti tutti insieme. 
+            Come si può notare viene utilizzato un file chiamato compile commands.json che è il file che è richiesto da certi analizzatori statici, come già detto nella \autoref{subsec:compile_database}.
       \item Per finire viene poi eseguito cppcheck che invece non ha bisogno di nessun aggiustamento e si può eseguire direttamente su tutta la cartella contenente i sorgenti con il seguente comando:
             \command{cppcheck \args{cartella\_sorgenti} -{}-output-file=cppcheck-bugs.txt}
     \end{itemize}
@@ -173,14 +171,14 @@ La prima fase della generazione del dataset consiste quindi nell'utilizzare i tr
 
 
 \section{Seconda fase: aggregazione dei report degli errori}
-Dopo la prima fase descritta nella sezione precedente avremo come risultato quattro report di errori in file separati. Questi report si distinguono per due caratteristiche principali: la struttura del file e la nomenclatura degli errori. 
-Per poter andare ad'utilizzare questi risultati, e fare quindi l'aggregazione di essi, dovremo effettuare due trasformazioni: un \textit{parsing} e una \textit{normalizzazione}.
+Dopo la prima fase, descritta nella sezione precedente, avremo come risultato quattro report di errori per ogni progetto in file separati. Questi report si distinguono per due caratteristiche principali: la struttura del file e la nomenclatura degli errori. 
+Per poter andare ad utilizzare questi risultati e fare quindi l'aggregazione di essi, dovremo effettuare due trasformazioni: un \textit{parsing} e una \textit{normalizzazione}.
 
 
 \subsection{Parsing dei report}
 Il \textit{parsing} è l'analisi di un dato in forma testuale per identificarne le sue componenti principali dove, in questo caso, sono la tipologia di errore e la sua posizione. 
 Nel nostro caso è possibile eseguire il parsing tramite delle specifiche \textit{regex} che, avendo diversi formati di file, saranno diverse per ognuno degli analizzatori.
-Il risultato del parsing sono quindi tanti record nella forma \record{errore, posizione}, dove la posizione indica sia il percorso del file ma sia anche la riga e la colonna dell'errore.
+Il risultato del parsing sono quindi tanti record nella forma \record{errore, posizione}, dove la posizione indica sia il percorso del file sia la riga e la colonna dell'errore.
 
 \subsection{Normalizzazione}
 Per \textit{normalizzazione} si intende il processo di uniformare ad'un unico spazio di valori i dati forniti. Questo fase è fondamentale poiché i vari analizzatori forniscono lo stesso tipo di errore sotto nomi diversi. 
@@ -202,10 +200,7 @@ Notiamo inoltre un concetto fondamentale: analizzatori diversi producono analisi
 Si può osservare granularità maggiore, per il tipo di errore 'Memory leak', da parte di Cppcheck e Clang nella \autoref{tab:nomenclature}.
 Infatti tutti e due definiscono più tipologie di errori che però, per convezione di questo progetto, vengono raggruppate in un'unica macro categoria.
 Al contrario ci sono invece casi in cui un analizzatore non ha sensibilità sufficiente per distinguere fra due o più categorie di errori, in questa situazione un errore di quel tipo viene normalizzato in un errore per ogni categoria che potrebbe rappresentare, si può vedere ciò nella \autoref{tab:granularità}.
-Nella eventualità quindi che Clang riferisca un errore di tipo 'unix.Malloc' dopo la fase di normalizzazione avremo due errori nella stessa posizione: uno di tipo 'Memory leak' e uno di tipo 'Use after free'. 
-
-Per effettuare la normalizzazione è stata quindi sviluppata una tabella che associa ad'ogni forma normalizzata degli errori le forme definite dagli analizzatori usati.
-Questa tabella è stata poi utilizzata come dizionario per convertire le tipologie di errori.
+Nella eventualità quindi che Clang riferisca un errore di tipo 'unix.Malloc', dopo la fase di normalizzazione avremo due errori nella stessa posizione: uno di tipo 'Memory leak' e uno di tipo 'Use after free'. 
 
 \begin{center}
   \begin{tabular}{|c|c|}
@@ -220,6 +215,10 @@ Questa tabella è stata poi utilizzata come dizionario per convertire le tipolog
   \captionof{table}{Tabella che mostra come un determinato errore di un analizzatore potrebbe corrispondere a più forme normalizzate} \label{tab:granularità}
 \end{center} 
 
+Per effettuare la normalizzazione è stata quindi sviluppata una tabella che associa ad ogni forma normalizzata degli errori le forme definite dagli analizzatori usati.
+Questa tabella è stata poi utilizzata come dizionario per convertire le tipologie di errori.
+
+
 %vengono definiti più errori, nella stessa posizione, per ogni categoria che potrebbe rappresentare quell'errore.
 
 \subsection{Aggregazione dei report}
@@ -232,7 +231,7 @@ Modificando il parametro $n$ andremo, di conseguenza, a modificare la precisione
     \item Ponendo $n=2$ avremo un bilanciamento fra precisione e dimensione del dataset. Vengono infatti selezionati tutti gli errori riferiti da almeno due analizzatori. 
         %Infatti come è stato notato empiricamente è alquanto raro che più di due degli analizzatori individuino un specifico errore,
           %quindi con $n=2$ manterremo comunque un sufficiente numero di dati migliorandone però la precisione.
-    \item Ponendo $n>2$ invece il numero di errori selezionato diventa così basso che renderebbe difficile addestrare una rete, il numero però di falsi positivi diminuisce di conseguenza.
+    \item Ponendo $n>2$ invece il numero di errori selezionato diventa così basso che renderebbe difficile addestrare il modello, il numero di falsi positivi però diminuisce di conseguenza.
   \end{itemize}
 Si può vedere in modo più chiaro come al variare del valore di $n$ cambi il numero di errori ottenuti in \autoref{fig:grafo_aggregazione}.
 Nel caso di questo lavoro sono stati utilizzati dataset sia derivanti dal porre $n=1$ sia dal porre $n=2$.
@@ -272,24 +271,21 @@ Nel caso di questo lavoro sono stati utilizzati dataset sia derivanti dal porre 
 \end{figure}
 
 \section{Terza fase: associazione tra errore e codice}
-Lo scopo di questa fase è quello di mappare la posizione di ogni singolo errore ad'un determinato \textit{code snippet}. 
+Lo scopo di questa fase è quello di mappare la posizione di ogni singolo errore ad un determinato \textit{code snippet}. 
 Prima di far ciò va definito però a che livello eseguire le analisi e quindi le successive predizioni del modello.
 Le possibili strade che si possono intraprendere sono:
   \begin{itemize}
-    \item A livello di file. Facendo ciò, dato un errore il \textit{code snippet} che associamo è il codice sorgente del intero file. 
+    \item A livello di file. Facendo ciò, dato un errore, il \textit{code snippet} che associamo è il codice sorgente del intero file. 
           Questo metodo ha due vantaggi principali: la semplicità e la quantità d'informazioni codificate. 
-          Ha però anche una serie di svantaggi: per il modello potrebbe essere troppo dispersivo per file grandi e dal momento che un singolo file è probabile che contenga più errori il modello dovrebbe restituire sequenze di predizioni.
+          Ha però anche una serie di svantaggi: per il modello potrebbe essere troppo dispersivo per file grandi e, dal momento che un singolo file è probabile che contenga più errori, il modello dovrebbe restituire sequenze di predizioni.
     \item A livello di funzione. In questo caso si associa all'errore il blocco della funzione che lo racchiude.
-          Il beneficio di ciò è la riduzione drastica del frammento di codice associato ad'un errore, rendendo più chiare le relazioni tra i vari elementi del codice e il tipo di errore.
-    \item A livello di riga, in cui ad'un dato errore associamo come code snippet solo la riga stessa. In questo caso la dispersione sarà minima ma allo stesso tempo lo sarà la quantità d'informazioni a disposizione.
+          Il beneficio di ciò è la riduzione drastica del frammento di codice, rendendo più chiare le relazioni tra i vari elementi del codice e il tipo di errore.
+    \item A livello di riga, in cui ad un dato errore associamo come code snippet solo la riga stessa. In questo caso la dispersione sarà minima ma allo stesso tempo lo sarà la quantità d'informazioni a disposizione.
   \end{itemize}
 
-In \autoref{fig:trade_off} possiamo notare il \textit{trade-off} che avviene tra l'aumentare della dimensione del code snippet e la quantità d'informazioni da esso incapsulata. 
+In \autoref{fig:trade_off} possiamo notare il \textit{trade-off} che avviene tra l'aumento della dimensione del code snippet e la quantità d'informazioni da esso incapsulata. 
 
-Nel lavoro svolto è stato scelto di eseguire le analisi a livello di funzione, andando però ad aumentare il quantitativo d'informazioni a disposizione aggiungendo un contesto della funzione (la cui definizione verrà data in seguito nella \autoref{subsec:context}). 
-Facendo questa scelta inoltre è possibile approssimare il problema ipotizzando che in una data funzione ci sia massimo un solo errore, rendendo quindi l'architettura del modello finale più semplice.
-
-\begin{figure}
+\begin{figure}[h]
   \centering
   \begin{tikzpicture}
     \begin{axis}[
@@ -308,11 +304,16 @@ Facendo questa scelta inoltre è possibile approssimare il problema ipotizzando 
     \end{axis}
     %
   \end{tikzpicture}
-  \caption{\textit{Trade-off} che avviene tra la dispersività e la quantità di informazioni. Selezionando tanto codice avremo tante informazioni ma anche la dispersività aumentata, mentre selezionandone poco avremo poca dispersività ma potremmo perdere informazioni chiave.
+  \caption{\textit{Trade-off} che avviene tra la dispersività e la quantità di informazioni. Selezionando tanto codice avremo molte informazioni codificate ma aumenterà, allo stesso tempo, la dispersività, mentre selezionandone poco avremo poca dispersività ma potremmo perdere informazioni chiave.
     Le due linee rosse indicano un punto di bilanciamento tra i due.
   }
   \label{fig:trade_off}
 \end{figure}
+
+Nel lavoro svolto è stato scelto di eseguire le analisi a livello di funzione, andando però ad aumentare il quantitativo d'informazioni a disposizione aggiungendo un contesto della funzione (la cui definizione verrà data in seguito nella \autoref{subsec:context}). 
+Facendo questa scelta, è possibile approssimare il problema ipotizzando che in una data funzione ci sia massimo un solo errore, rendendo quindi l'architettura del modello finale più semplice.
+
+
 
 Una volta determinato il livello a cui svolgere le analisi possiamo tornare al problema principale: estrarre il codice della funzione che racchiude l'errore. 
 Nonostante questo possa sembrare un problema semplice di analisi testuale vedremo come, in realtà, non lo sia.
@@ -321,16 +322,16 @@ Prima di discutere di ciò dobbiamo quindi introdurre un concetto fondamentale: 
 
 
 \subsection{Alberi di sintassi astratta}
-Un albero di sintassi astratta, o in breve \textit{ast} (dall'inglese \textit{abstract syntax tree}), è una rappresentazione ad albero della struttura sintattica astratta di un testo, nel nostro caso del codice sorgente.
+Un albero di sintassi astratta, in breve \textit{ast} (dall'inglese \textit{abstract syntax tree}), è una rappresentazione ad albero della struttura sintattica astratta di un testo, nel nostro caso del codice sorgente.
 Queste strutture sono spesso generate da parser specifici e vengono utilizzati come rappresentazione intermedia del programma in un processo di compilazione.
 
 Possiamo vedere un esempio di albero prendendo il frammento di codice nello \autoref{code:esempio} scritto in uno pseudo-linguaggio.
 Un possibile albero di sintassi astratta per questo frammento di codice è quello indicato in \autoref{fig:ast_esempio}.
-Come si può vedere l'ast rappresenta in modo efficace la struttura completa del codice, andando ad'individuare e distinguere elementi come:
+Come si può vedere l'\textit{ast} rappresenta in modo efficace la struttura completa del codice, andando ad individuare e distinguere elementi come:
   \begin{itemize}
     \item Il corpo, la \textit{signature} e il valore di ritorno della funzione. 
-    \item La dichiarazione della variabile 'total' e il blocco del for.
-    \item I componenti del costrutto for: il corpo, la condizione, l'inizializzazione e lo step della variabile di controllo.
+    \item La dichiarazione della variabile 'total' e il blocco del \textit{for}.
+    \item I componenti del costrutto \textit{for}: il corpo, la condizione, l'inizializzazione e lo step della variabile di controllo.
   \end{itemize}
 
   \begin{code}[caption={Frammento di codice che calcola la somma dei valori in un vettore}, label={code:esempio}]
@@ -350,10 +351,10 @@ Come si può vedere l'ast rappresenta in modo efficace la struttura completa del
   \label{fig:ast_esempio}
 \end{figure}
 
-In questo progetto verranno utilizzati gli alberi di sintassi astratta per poter estrarre correttamente il codice della funzione che rinchiude l'errore. 
+In questo progetto verranno utilizzati gli alberi di sintassi astratta per poter estrarre correttamente il codice della funzione che racchiude l'errore. 
 Questa operazione poteva anche essere fatta a livello testuale ricercando le parentesi graffe di apertura e chiusura della funzione. 
-In questa maniera però sorgono casi problematici come l'utilizzo di parentesi graffe all'interno di commenti e/o stringhe che vanno ignorati o l'utilizzo particolare di direttive \textit{define}.
-Tutto ciò rende il problema in apparenza semplice in realtà complesso.
+In questa maniera, però, sorgono casi problematici come l'utilizzo di parentesi graffe all'interno di commenti (o stringhe) che vanno ignorati o l'utilizzo particolare di direttive \textit{define}.
+Tutto ciò rende il problema, in apparenza semplice, in realtà complesso.
 A supporto di ciò vediamo lo \autoref{code:esempio_codice_complesso} in cui, nonostante sia codice \CPP{} completamente valido, l'individuazione del corpo della funzione che racchiude la linea di errore è un operazione tutt'altro che semplice.
 
 \begin{code}[language=c++, caption={Esempio di codice valido con struttura particolare}, label={code:esempio_codice_complesso}]
@@ -369,31 +370,32 @@ A supporto di ciò vediamo lo \autoref{code:esempio_codice_complesso} in cui, no
 \end{code}
 
 \subsection{Generazione e parsing degli AST}
-Come accennato nella precedente sezione in questo lavoro vengono utilizzati gli ast come metodo per estrarre i blocchi delle funzioni e il loro relativo contesto.
+Come accennato nella precedente sezione, in questo lavoro vengono utilizzati gli \textit{ast} come metodo per estrarre i blocchi delle funzioni e il loro relativo contesto.
 Prima di tutto bisogna essere in grado di generare un albero di sintassi astratta dato un file sorgente.
 Per far ciò viene utilizzato il compilatore Clang che, attraverso flag specifiche, è in grado di generare un albero rappresentato in formato JSON.
 Più in particolare per ogni file sorgente che vogliamo analizzare viene eseguito il seguente comando:
   \command{
     clang -Xclang -ast-dump=json \args{file}
   }
-Il risultato di questa operazione è un file in formato JSON che rappresenta la struttura dell'albero. Prima però di proseguire questo file viene caricato e trasformato in una struttura ad albero vera e propria.
+Il risultato di questa operazione è un file in formato JSON che rappresenta la struttura dell'albero.
+Prima però di proseguire, questo file viene caricato e trasformato in una struttura ad albero vera e propria.
 
-Oltre alla struttura sintattica del codice all'interno dei dizionari JSON sono presenti informazioni ulteriori come: indicazioni sulla riga degli elementi, sui tipi, sui riferimenti esterni e molto altro.
-Tutte queste informazioni vengono poi usate sia per estrarre il codice ma sia per estrarre il contesto della funzione. 
+Oltre alla struttura sintattica del codice, all'interno dei dizionari JSON, sono presenti informazioni ulteriori: indicazioni sulla posizione degli elementi, sui tipi, sui riferimenti esterni e molto altro.
+Tutte queste informazioni vengono poi usate sia per estrarre il codice sia per estrarre il contesto della funzione. 
 
 \subsection{Contesto di una funzione} \label{subsec:context}
 Definiamo in fine cosa si intende con contesto di una funzione.
-Il contesto di una funzione è l'insieme di tutti quei riferimenti esterni che vengono effettuati all'interno del corpo della funzione stessa, possono includere quindi:
+Il contesto di una funzione è l'insieme di tutti quei riferimenti esterni che vengono effettuati all'interno del corpo della funzione, possono includere:
   \begin{itemize}
     \item Funzioni esterne.
     \item Variabili esterne.
-    \item Definizioni di tipo esterne. Visto che le definizioni di tipo possono dipendere da altri tipi non primitivi, in questo caso, oltre al riferimento stesso vengono aggiunte anche le dipendenze di esso.
+    \item Definizioni di tipo esterne. Visto che le definizioni di tipo possono dipendere da altri tipi non primitivi, in questo caso oltre al riferimento stesso vengono aggiunte anche le dipendenze di esso, dove per dipendenza di un tipo $t$ al tipo $v$ si intende che la dichiarazione di $t$ include il tipo $v$ (un esempio di ciò lo si può vedere nello \autoref{code:esempio_codice_grafo_dipendenze}).
   \end{itemize}
 L'idea posta alla base dell'includere questo contesto nel risultato finale è il poter dare al modello il maggior numero d'informazioni possibili mantenendo comunque limitata la dimensione dello snippet.
-Senza di questo infatti, anche un umano, potrebbe non essere in grado di comprendere il codice o non poterne trarre conclusioni significative su di esso. 
+Senza di questo, infatti, anche un umano potrebbe non essere in grado di comprendere il codice o non poterne trarre conclusioni significative su di esso. 
 Guardando infatti lo \autoref{code:esempio_codice_grafo_dipendenze}, senza l'inclusione nel risultato finale della variabile globale non potremmo determinare che nella funzione \textit{foo} ci sia effettivamente un errore di divisione per zero.
 
-\begin{code}[language=c++, caption={Esempio di codice da cui ricavare dipendenze esterne }, label={code:esempio_codice_grafo_dipendenze}]
+\begin{code}[language=c++, caption={Esempio di codice con riferimenti esterni}, label={code:esempio_codice_grafo_dipendenze}]
 
   typedef int typeA;
   typedef typeA typeB; 
@@ -418,11 +420,11 @@ Guardando infatti lo \autoref{code:esempio_codice_grafo_dipendenze}, senza l'inc
 
 \subsubsection{Estrazione del contesto}\label{sec:estrazione_contesto}
 Per l'estrazione del contesto vengono utilizzate le informazioni codificate nell'albero di sintassi astratta prodotto da Clang.
-Solamente per le definizioni di tipo vengono anche incluse le relative dipendenze e per far ciò viene costruito un grafo delle dipendenze.
+Solamente per le definizioni di tipo vengono incluse anche le relative dipendenze e per far ciò viene costruito un grafo delle dipendenze.
 
-Il grafo delle dipendenze è un grafo diretto in cui un vertice $v$ rappresenta una dichiarazione di tipo mentre un arco $(u,v)$ rappresenta la dipendenza del tipo $u$ dal tipo $v$.
+Il grafo delle dipendenze è un grafo diretto in cui un vertice $v$ rappresenta una dichiarazione di tipo, mentre un arco $(u,v)$ rappresenta la dipendenza del tipo $u$ dal tipo $v$.
 Prendiamo come esempio lo \autoref{code:esempio_codice_grafo_dipendenze}. 
-Il contesto della funzione \textit{foo} in questo caso dovrà mantenere informazioni sulla definizione di \textit{typeB} che però dipende dalla definizione del \textit{typeA}.
+Il contesto della funzione \textit{foo} in questo caso dovrà mantenere informazioni sulla definizione di \textit{typeB}, dipendente però dalla definizione del \textit{typeA}.
 Bisogna quindi costruire il grafo delle dipendenze dei tipi utilizzando le informazioni contenute all'interno dell'albero di sintassi astratta.
 Possiamo vedere quindi il grafo delle dipendenze per questo specifico frammento di codice in \autoref{fig:grafo_dipendenze}.
 
@@ -448,7 +450,7 @@ Possiamo vedere quindi il grafo delle dipendenze per questo specifico frammento 
   \label{fig:grafo_dipendenze}
 \end{figure}
 
-Per poter ricavare quindi, una volta costruito il grafo delle dipendenze, le dipendenze delle dichiarazioni di tipo si può eseguire una visita in ampiezza partendo dal riferimento esterno stesso.
+Per poter ricavare le dipendenze delle dichiarazioni di tipo, una volta costruito il grafo, si può eseguire una visita in ampiezza partendo dal riferimento esterno stesso.
 Nel caso della funzione \textit{foo} otterremo quindi, visto il riferimento esterno al tipo \textit{typeB}, due definizioni di tipo, quelle di \textit{typeB} e \textit{typeA}.  
 
 \subsection{Esempio di risultato finale}
@@ -469,16 +471,16 @@ Riprendendo sempre lo \autoref{code:esempio_codice_grafo_dipendenze} avremo che 
 
 \end{code}
 
-Notiamo quindi che la definizione del tipo \textit{typeC} non è inclusa poiché non utilizzata all'interno del corpo della funzione, mentre sia la variabile globale sia le due definizioni di tipo e sia la signature della funzione \textit{bar} sono incluse nel contesto.
+Notiamo quindi che la definizione del tipo \textit{typeC} non è inclusa poiché non utilizzata all'interno del corpo della funzione, mentre, sia la variabile globale, sia le due definizioni di tipo e sia la signature della funzione \textit{bar} sono incluse nel contesto.
 
 
 \section{Quarta fase: Generazione degli AST-context}
-Come accennato nell'introduzione teorica nel \autoref{chap:introduzione_teorica}, il modello che verrà utilizzato prenderà in input il codice sorgente processato sotto forma di \textit{ast context}, cioè delle triple della forma:
+Come accennato nell'introduzione teorica nel \autoref{chap:introduzione_teorica}, il modello che verrà utilizzato prenderà in input il codice sorgente processato sotto forma di vettore di \textit{ast contexts}, cioè delle triple della forma:
   \[\anglebra{x_s, p, x_t}\]
 
 dove $x_s$ e $x_t$ sono rispettivamente il \textit{token start} e \textit{token end}, mentre $p$ è il \textit{path} come descritto in \cite{alon2019code2vec}.
 A differenza però di come viene illustrato nell'articolo, in cui $x_s$ e $x_t$ sono un singolo valore, verranno utilizzati dei vettori di token di inizio e fine, nel tentativo di ridurre la dimensione dei vocabolari.
-Per generare queste triple verrà utilizzato un tool chiamato \textit{astminer}.
+Per generare queste triple verrà utilizzato un tool chiamato \textit{Astminer}.
 
 \subsection{AstMiner}
 Astminer rappresenta il lavoro descritto in \cite{kovalenko2019pathminer} ed è un tool che permette di estrarre gli ast context da file sorgenti scritti in vari linguaggi come Python, C/\CPP{} e Java.
@@ -487,35 +489,33 @@ Può essere utilizzato in due modi differenti:
     \item Come una libreria di Kotlin/Java.
     \item Come un tool standalone della CLI. Questo sarà il modo che verrà utilizzato nel progetto essendo stato scritto tutto in Python.
   \end{itemize}
-Lo strumento è configurabile in svariati modi, l'uniche configurazioni rilevanti utilizzate sono:
+Lo strumento è configurabile in svariati modi; le uniche configurazioni rilevanti utilizzate sono:
   \begin{itemize}
     \item \'E stato utilizzato in modalità code2vec.
     \item Sono stati utilizzati i seguenti valori:
       \begin{itemize}
-        \item maxPathContextsPerEntity $=200$
-        \item maxPathLength $=20$
-        \item nodesToNumbers $=$ false. Infatti i token sia del percorso sia di inizio e fine verranno gestiti non da astminer ma a livello dell'applicazione con vocabolari specifici.
+        \item maxPathContextsPerEntity $=200$. Questo valore rappresenta il numero massimo di \textit{ast context} da associare ad'un frammento di codice.
+        \item maxPathLength $=20$. Questo valore rappresenta, invece, la lunghezza massima dei cammini.
+        \item nodesToNumbers $=$ false. Infatti i vocabolari per la traduzione dei token verranno gestiti, non da Astminer, ma a livello dell'applicazione.
       \end{itemize}
   \end{itemize}
-Come però già accennato nell'introduzione di questa sezione, il prodotto di Astminer in realtà non è esattamente uguale a quello illustrato nel articolo di code2vec.
-Infatti invece che avere dei singoli valori per $x_s$ e $x_t$, Astminer produce in output ast context che hanno token d'inizio e fine che sono vettori, scomponendo token complessi in token multipli.
-\'E stato deciso di non modificare questa scelta poiché potrebbe portare alla riduzione notevole della dimensione del vocabolario dei token, andando a rendere più significativo ogni singolo token.
+Come però già accennato nell'introduzione di questa sezione, il prodotto di Astminer in realtà non è esattamente uguale a quello illustrato nell'articolo di code2vec: invece che avere dei singoli valori per $x_s$ e $x_t$, Astminer produce in output \textit{ast context} che hanno token d'inizio e fine che sono vettori, scomponendo token complessi in token multipli.
+\'E stato deciso di non modificare questa scelta poiché potrebbe portare ad una riduzione notevole della dimensione del vocabolario dei token, rendendo più significativo ogni singolo token.
 
-Questa fase è una delle fasi più lente di tutte, seconda solo all'esecuzione degli analizzatori statici.
 
 \subsection{Generazioni vocabolari per i token e per i path}\label{subsec:vocab}
-L'output dell'esecuzione di astminer, visto il parametro nodesToNumbers $=$ false, sono degli ast context dove ogni token è ancora in formato letterale.
+L'output dell'esecuzione di astminer, visto il parametro nodesToNumbers $=$ false, sono degli \textit{ast context} dove ogni token è ancora in formato letterale.
 Per essere utilizzabile questo formato deve però prima essere trasformato in un valore intero.
-Tale valore intero rappresenterà l'indice del token letterale all'interno di uno specifico vocabolario.
+Tale valore rappresenterà l'indice del token letterale all'interno di uno specifico vocabolario.
 
 Più in particolare vengono creati due dizionari diversi:
   \begin{itemize}
-    \item Un dizionario dei token degli elementi dei cammini ($p$), che d'ora in avanti chiameremo \textit{path vocab}.
-    \item Un dizionario dei token degli elementi terminali (i valori $x_s$ e $x_t$ del ast context). In questo caso lo chiameremo \textit{token vocab}.
+    \item Un dizionario dei token degli elementi dei cammini ($p$) che d'ora in avanti chiameremo \textit{path vocab}.
+    \item Un dizionario dei token degli elementi terminali (i valori $x_s$ e $x_t$ del \textit{ast context}). In questo caso lo chiameremo \textit{token vocab}.
   \end{itemize}
 In \autoref{fig:grafo_vocab_size} possiamo vedere la dimensione dei due vocabolari.
-Si può vedere come i due abbiano ordini di grandezza completamente differenti, questo può essere spiegato dal fatto che i token terminali racchiudono svariate tipologie di elementi come nomi di variabile e di metodi,
-mentre i token dei cammini racchiudono solamente elementi sintattici fissi come possono essere costrutti come dichiarazioni, blocchi e operazioni.
+Si può vedere come i due abbiano ordini di grandezza completamente differenti, questo può essere spiegato dal fatto che i token terminali racchiudono svariate tipologie di elementi come nomi di variabili e di metodi,
+mentre i token dei cammini racchiudono solamente elementi sintattici fissi: costrutti come dichiarazioni, blocchi e operazioni.
 
   \begin{figure}
     \centering
@@ -552,8 +552,25 @@ mentre i token dei cammini racchiudono solamente elementi sintattici fissi come 
     \label{fig:grafo_vocab_size}
 \end{figure}
 
-  %TODO grafo dimensione vocabolari
+\section{Risultato finale della generazione}
+Il risultato dell'esecuzione di tutte le fasi menzionate è quindi un dataset formato da due elementi chiave:
+    \begin{itemize}
+        \item I \textit{code snippet} sotto forma di vettori di \textit{ast contexts} a cui vengono associate due informazioni:
+        \begin{itemize}
+            \item Un'etichetta indicante la tipologia di errore o la classificazione di una funzione senza errori.
+            \item Il numero della riga dell'errore.
+        \end{itemize}
+        \item I due vocabolari dei token dei cammini e dei valori terminali.
+    \end{itemize}
 
+\subsection{Estrazione di frammenti di codice senza errori}
+Non è ancora stato menzionato come vengono ricavati i \textit{code snippet} che non presentano errori.
+Il modello finale, infatti, dovrà essere in grado di determinare sia la tipologia di errore sia se effettivamente il frammento presenta errori.
+Questa estrazione avviene in modo molto semplice: tutte le funzioni che non presentano errori sono estratte. 
+
+Come però vedremo nel \autoref{chap:modello}, il dataset è molto sbilanciato verso la classe di non errore.
+Per ridurre ciò, e anche per rendere il file del dataset più maneggiabile, vengono solo analizzati file che presentano errori.
+Di conseguenza avremo che il numero di funzioni senza errori viene ridotto drasticamente. 
 
 %\subsection{Fase 1: utilizzo di analizzatori statici per la generazione di report di errori}
 
