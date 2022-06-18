@@ -21,7 +21,7 @@ Possiamo vedere riassunta a grandi linee la struttura della rete in \autoref{fig
             \tikzset{vertex/.style = {shape=circle,draw,minimum size=1.5em}}
             \tikzset{edge/.style = {->,> = latex'}}
             
-            \node[block] (input) at (0,0) {input};
+            \node[block, label={Input}] (input) at (0,0) {ast contexts vector};
             \node[block] (code2vec) at (4,0) {code2vec};
 
             \node[block] (classificazione) at (8, 2) {classificazione};
@@ -37,63 +37,7 @@ Possiamo vedere riassunta a grandi linee la struttura della rete in \autoref{fig
       \label{fig:struttura}
 \end{figure}
 
-
-\begin{figure}[h]
-    \centering
-    \scalebox{0.8}{
-        \begin{tikzpicture}[block/.style={draw, rectangle, minimum height=1cm}]
-            \tikzset{vertex/.style = {shape=circle,draw,minimum size=1.5em}}
-            \tikzset{edge/.style = {->,> = latex'}}
-
-            \node[vertex] (xs0) at (0,3) {$x_s^0$};
-            \node[vertex] (p0) at (0,1) {$p^0$};   
-            \node[vertex] (xt0) at (0,-1) {$x_t^0$};
-            
-            \node at (1,3) {...};
-            \node at (1,1) {...};
-            \node at (1,-1) {...};
-
-
-            \node[vertex] (xsc) at (2,3) {$x_s^c$};
-            \node[vertex] (pc) at (2,1) {$p^c$};   
-            \node[vertex] (xtc) at (2,-1) {$x_t^c$};
-
-
-            \node[vertex] (mask) at (1,-3) {$m$};
-
-
-            \node[vertex] (xs) at (4,3) {$x_s$};
-            \node[vertex] (p) at (4,1) {$p$};   
-            \node[vertex] (xt) at (4,-1) {$x_t$};
-
-
-
-            \node[block] (classificazione) at (15, 2) {classificazione};
-            \node[block] (regressione) at (15, -2) {regressione};
-
-            \node (input) at(3.5,0) {};
-
-            \node[rectangle, draw,dotted,red, ultra thick,label={[red]code2vec}, minimum width=6cm,
-            minimum height = 2cm] at(8,0) (code2vec) {};
-
-            \draw  [decorate,decoration={brace,amplitude=10pt}] (2.75,3.5) -- (2.75,-1.5) node (vec) [black,midway,xshift=0.4cm, yshift=1.8cm, label={[rotate=-90]right:contexts vector}] {};
-            
-            \node [fit=(xs0) (p0) (xt0) (mask) (xsc) (pc) (xtc),draw,dotted,blue, thick,label={[blue]input}] {};
-            %\node [fit=(code2vec) (vector),draw,dotted,red, ultra thick,label={[red]code2vec}] (code2vec) {};
-            \node [fit=(classificazione) (regressione),draw,dotted,orange, ultra thick,label={[orange]predizione}] {};
-        
-            \draw[edge] (code2vec) to (classificazione);
-            \draw[edge] (code2vec) to (regressione);
-
-            \draw[edge] (input) to (code2vec);
-            \end{tikzpicture}
-        }
-      \caption{Struttura del modello utilizzato}
-      \label{fig:struttura}
-\end{figure}
-
-
-Nelle successive sezione, in maniera approfondita, le seguenti tematiche:
+Nelle successive sezione discuteremo, in maniera approfondita, le seguenti tematiche:
     \begin{itemize}
         \item La struttura degli input e come sono stati gestiti i cambiamenti della loro forma discussi in precedenza nel \autoref{chap:dataset}.
         \item La struttura del modello di classificazione.
@@ -103,79 +47,109 @@ Nelle successive sezione, in maniera approfondita, le seguenti tematiche:
 
 \subsection{Struttura degli input}
 Il dataset generato nel \autoref{chap:dataset} contiene per ogni suo elemento un vettore di \textit{ast contexts}, cioè un vettore di triple della forma:
-    \[(x_s, p, x_t)\]
+    \[(x_s^{(i)}, p^{(i)}, x_t^{(i)})\]
 tali per cui vale la seguente relazione:
-    \[x_s, x_t \in \mathbb{N}^{l} \quad p \in \mathbb{N}^{k}\]
-dove $l$ e $k$ rappresentano rispettivamente la lunghezza massima del vettore dei token di inizio/fine e la lunghezza massima del vettore dei cammini, fissate al momento della creazione del dataset (nel nostro caso $l=10$ e $k=20$).
-Per poter essere inserito all'interno di un modello dobbiamo 
+    \[x_s^{(i)}, x_t^{(i)} \in \mathbb{N}^{l}, \quad p^{(i)} \in \mathbb{N}^{k}\]
+dove $l$ e $k$ rappresentano rispettivamente la lunghezza massima del vettore dei token di inizio/fine e la lunghezza massima del vettore dei cammini\footnote{Nel caso in cui non siano effettivamente lunghi $l$ o $k$ vengono ridimensionati tramite del \textit{padding}},
+fissate al momento della creazione del dataset (vedremo in seguito che valori sono stati assegnati e provati).
 
 
+Prima però di poter utilizzare questo vettore come input del modello, deve essere trasformato in tre vettori separati della seguente forma:
+\[x_s, x_t \in \mathbb{N}^{c \times l}, \quad p \in \mathbb{N}^{c \times k}\]
+dove la constante $c$ rappresenta la lunghezza massima dei vettori di \textit{ast contexts} (di nuovo in seguito vedremo i suoi valori).
+Definiamo i tre vettori nel seguente modo:
+    \begin{align*}
+        x_s &= (x_s^{(0)}, x_s^{(1)}, ..., x_s^{(c)}) \\
+        x_t &= (x_t^{(0)}, x_t^{(1)}, ..., x_t^{(c)}) \\
+        p &= (p^{(0)}, p^{(1)}, ..., p^{(c)}) 
+    \end{align*}
+Può succedere, però, che un vettore di \textit{ast contexts} abbia una lunghezza $c^{\prime} < c$.
+In questo caso dovremo andare ad aggiungere $c - c^{\prime}$ \textit{ast contexts} di \textit{padding} che saranno rappresentati da specifiche triple di vettori di token che, nel rispettivo vocabolario, rappresentano dei token di \textit{padding} (saranno dei token \<PAD\textgreater).
+
+Una volta fatto questo dobbiamo però indicare al modello quali degli \textit{ast contexts} sono di \textit{padding}. 
+Per far ciò introduciamo l'ultimo dei quattro input del modello: la maschera.
+La maschera sarà un vettore $m$ di lunghezza $c$ definito nel seguente modo:
+    \begin{align*}
+        m_i =
+        \begin{cases*}
+        1 & se l'elemento $i$-esimo non è padding \\
+        0 & altrimenti
+        \end{cases*}
+    \end{align*}
+
+\subsection{Gestione cambiamenti della forma}
+Una volta trasformato l'input avremo quindi tante quadruple della forma:
+    \[(x_s, p, x_t, m)\]
+tale per cui:
+\[x_s, x_t \in \mathbb{N}^{c \times l}, \quad p \in \mathbb{N}^{c \times k}, \quad m \in  \mathbb{N}^{c}\]
+All'interno del modello, la prima trasformazione che avviene è quella dell'\textit{embedding} dei tre vettori di token attraverso un \textit{layer} specifico.
+Il risultato di ciò sono dei vettori della forma:
+    \[x_s^{\prime}, x_t^{\prime} \in \mathbb{N}^{c \times l \times d}, \quad p^{\prime} \in \mathbb{N}^{c \times k \times d}\]
+dove $d$ è la dimensione dell'\textit{embedding} (nota: $d$ può essere diverso per $p$, $x_s$ e $x_t$).
+Nella studio di code2vec \cite{alon2019code2vec}, come era già stato discusso nel \autoref{chap:dataset}, i vettori d'input hanno una forma leggermente diversa:
+\[x_s, x_t \in \mathbb{N}^{c}, \quad p \in \mathbb{N}^{c}, \quad m \in  \mathbb{N}^{c}\]
+ottenendo successivamente al \textit{layer} di \textit{embedding}:
+\[x_s^{\prime}, x_t^{\prime} \in \mathbb{N}^{c \times d}, \quad p^{\prime} \in \mathbb{N}^{c \times d}\]
+Per uniformare quindi i valori a come quelli usati dalla ricerca, effettueremo un appiattimento dei vettori post-\textit{embedding}, ottenendo:
+\[x_s^{\prime\prime}, x_t^{\prime\prime} \in \mathbb{N}^{c \times (l \cdot d)}, \quad p^{\prime\prime} \in \mathbb{N}^{c \times (k \cdot d)}\]
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Come si può vedere nella \autoref{fig:struttura} l'input è formato da quattro vettori diversi:
-    \begin{itemize}
-        \item La tripla $(x_s, p, x_t)$ che rappresenta l'\textit{ast context}, tale per cui:
-            \[x_s, x_t \in \mathbb{N}^{c \times l}, \quad p \in \mathbb{N}^{c \times k}\]
-        dove $l$ e $k$ rappresentano rispettivamente la lunghezza massima del vettore dei token di inizio/fine e la lunghezza massima del vettore dei cammini (fissate al momento della creazione del dataset).
-        , mentre $c$ rappresenta il numero di massimo \textit{ast context} per ogni dato del dataset.
-        Succede spesso che i vettori non siano di lunghezza sufficiente, in questi casi vengono aggiunti degli elementi di \textit{padding}
-        tali da raggiungere la lunghezza di $l$ o $k$. Questi elementi di \textit{padding} sono rappresentati da un valore particolare nei rispettivi vocabolari.
-        \item Una vettore maschera $m$ di lunghezza $k$ definito nel seguente modo:
-        \begin{align*}
-                m_i =
-                \begin{cases*}
-                  1 & se $p_i$ non è padding \\
-                  0 & altrimenti
-                \end{cases*}
-        \end{align*}
-        Non è invece definito un vettore maschera per i vettori dei token d'inizio e fine, questo perché l'implementazione avrebbe aumentato di troppo la dimensione della rete.
-    \end{itemize}
-Come già accennato 
 \subsection{Classificazione}
 L'obbiettivo della classificazione in questo modello è il predire la classe di errore o l'assenza di errore. 
 Il modello, di conseguenza, in output dovrà fornire un vettore $c$ tale per cui per ogni $i$:
-\[0 < c_i < 1\]
+\[0 \leq c_i \leq 1\]
 avremo quindi che il vettore $c$ è una \textit{distribuzione di probabilità} delle classi da predire.
-Di conseguenza la classe con maggior probabilità sarà la classe predetta. Più formalmente la classe predetta $i$ sarà:
+Di conseguenza la classe con maggior probabilità sarà la classe predetta, cioè:
     \[\argmax_i c_i\]
-Nel lavoro svolto la rete di classificazione è costituita da una serie di \textit{hidden dense layer} culminanti in un \textit{layer} di predizione che utilizza come funzione di attivazione la funzione \textit{softmax}.
+Nel lavoro svolto la rete di classificazione prenderà in input il vettore delle \textit{feature} prodotto dal modello di code2vec.
+Questo vettore viene dato in input ad'una serie di \textit{hidden dense layer} culminanti in un \textit{layer} di predizione che utilizza come funzione di attivazione la funzione \textit{softmax}, andando a produrre il vettore $c$.
+
+Visto l'output che produce questo modello, prima di poter computare la funzione di \textit{loss} dovremo trasformare il \textit{label} associato al \textit{code snippet} in una versione \textit{one-hot encoded}. 
 
 
 
 
-\subsection{Predizione di regressione}
+\subsection{Regressione}
+Il modello della regressione ha come scopo il predire il numero della riga dell'eventuale errore.
+La struttura utilizzata è molto semplice: un unico \textit{dense layer} che prende in input il vettore delle \textit{feature} con un singolo output.
+
+Similmente alla classificazione, anche per la regressione dobbiamo processare la riga dell'errore associata al \textit{code snippet}. 
+Per evitare di avere una varianza troppo grande, con a volte numeri di riga molto bassi e a volte molto alti, il valore viene normalizzato da un fattore costante tale da rendere ogni singolo valore compreso tra 0 e 1.
 
 
-\subsection{Reshape degli input}
 
-\subsection{Ulteriori architetture del modello provate}
+\section{Sbilanciamento del dataset}\label{sec:sbilanciamento}
+\subsection{Loss pesata}
+\subsection{Oversampling}
 
-
-\section{Soluzioni allo sbilanciamento del dataset}
-    \subsection{Oversampling}
-    \subsection{Loss pesata}
 \section{Training}
+\subsection{Overfitting}
+    \subsubsection{Feature selection}
 \subsection{Metriche utilizzate}
 
 \section{Risultati}
 \subsection{Risultati dati dal test dataset}
 \subsection{Risultati dati su codice creato al momento}
+
+
+
+\section{Ulteriore architettura per la classificazione provate}
+Come vedremo in seguito, il modello riesce a determinare con sufficiente correttezza se un \textit{code snippet} presenta o no un errore e riesce a catalogare bene il tipo di errore.
+Se però deve fare queste predizioni tutte insieme (e cioè deve predire o la classe indicante l'assenza di errore o la classe dell'errore), vedremo, il modello non generalizzerà altrettanto bene.
+
+Per provare a migliorare i risultati del modello, è stato provato a dividere il meccanismo di predizioni in due fasi:
+    \begin{itemize}
+        \item Determinare la presenza o l'assenza di un errore.
+        \item Determinare la classe dell'errore.
+    \end{itemize}
+In questa modalità qui, quindi, il modello oltre ad'effettuare le regressione esegue due classificazioni: una binaria e una a più classi.
+
+I risultati prodotti da questa versione, però, non sono così distanti dal modello effettivamente usato.
+Questo potrebbe essere determinato da un fattore principale: la difficoltà nell'addestramento. 
+Infatti, indipendentemente dalla predizione binaria che fa, il modello restituirà sempre in output anche una predizione sulla classe dell'errore e di conseguenza verrà computata la funzione di perdita.
+Per questa ragione anche ai frammenti di codice senza errori bisogna associare un vettore per la predizione delle classi, ma dati i problemi dovuti allo sbilanciamento del dataset discussi in \autoref{sec:sbilanciamento},
+il modello imparava a predire solo questo vettore (che è sicuramente il più prevalente).
+
+Una possibile miglioria sarebbe di separare completamente i due modelli: uno predice la presenza o no di errori e l'altro predice solamente l'errore e il numero della riga.
+Il funzionamento sarebbe poi il seguente: si utilizza il primo modello per primo poi, nel caso di rilevamento di errori, si utilizza il secondo modello per determinarne il tipo.
+Non è stata esplorata questa possibilità poiché al di fuori della portata di questo lavoro. 
