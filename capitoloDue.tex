@@ -562,6 +562,49 @@ Il risultato dell'esecuzione di tutte le fasi menzionate è quindi un dataset fo
         \end{itemize}
         \item I due vocabolari dei token dei cammini e dei valori terminali.
     \end{itemize}
+In \autoref{tab:tabella_errori} possiamo vedere riassunti sia le tipologie di errori estratti sia la loro frequenza.
+    \begin{center}
+      \begin{tabular}{|c|c|}
+        \hline
+        Errore & Osservazioni \\
+        \hline
+        Assenza errore & 41417 \\
+        \hline
+        Memory leak & 1032 \\
+        \hline
+        Null dereference & 911 \\
+        \hline
+        Dead store & 791 \\
+        \hline
+        Variable not initialized & 325 \\
+        \hline
+        Resource leak & 122 \\
+        \hline
+        Double free & 83 \\
+        \hline
+        Pointer conversion & 80 \\
+        \hline
+        Data not initialized & 56 \\
+        \hline
+        Null argument & 31 \\
+        \hline
+        Use after lifetime & 16 \\
+        \hline
+        Division by zero & 10 \\
+        \hline
+        Integer overflow & 4 \\
+        \hline
+        Call and message & 3 \\
+        \hline
+        Array not initialized & 2 \\
+        \hline
+        Use closed file & 1 \\
+        \hline
+      \end{tabular}
+      \caption{Tabella riassuntiva degli errori estratti con la loro frequenza}
+      \label{tab:tabella_errori}
+    \end{center}
+
 
 \subsection{Estrazione di frammenti di codice senza errori}
 Non è ancora stato menzionato come vengono ricavati i \textit{code snippet} che non presentano errori.
