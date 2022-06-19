@@ -77,7 +77,7 @@ La maschera sarà un vettore $m$ di lunghezza $c$ definito nel seguente modo:
         \end{cases*}
     \end{align*}
 
-\subsection{Gestione cambiamenti della forma}
+\subsection{Gestione cambiamenti della forma}\label{subsec:cambiamenti_forma}
 Una volta trasformato l'input avremo quindi tante quadruple della forma:
     \[(x_s, p, x_t, m)\]
 tale per cui:
@@ -307,12 +307,82 @@ Utilizzando questa tecnica insieme all'\textit{oversampling} si riduce significa
 L'addestramento della rete è stato eseguito numerose volte provando valori per gli \textit{iper parametri} ogni volta diversi. 
 Questi parametri, nel nostro caso, consistono in:
     \begin{itemize}
-        \item Gli iper parametri standard come \textit{learning rate, batch size, epoche} e \textit{dropout rate} (per il \textit{layers} di \textit{dropout} che discuteremo in \autoref{subsec:overfitting}).
+        \item Gli iper parametri standard come \textit{learning rate, batch size, epochs, steps per epoch} e \textit{dropout rate} (per il \textit{layers} di \textit{dropout} che discuteremo in \autoref{subsec:overfitting}).
+        \item La dimensione degli \textit{embedding} dei token dei cammini e d'inizio/fine, cioè il valore $d$ introdotto in \autoref{subsec:cambiamenti_forma}.
+        \item La dimensione del vettore delle \textit{feature} prodotto dal modello code2vec.
+        \item Il numero $k$ di classi da utilizzare. 
     \end{itemize}
+L'addestramento inoltre è stato eseguito utilizzando come ottimizzatore l'algoritmo Adam. 
+Come \textit{loss function} ne vengono utilizzate due, una per la regressione e una per la classificazione, e sono le seguenti:
+    \begin{itemize}
+        \item La \textit{categorical crossentropy loss} per la classificazione, nel caso si utilizzi un $k>2$, mentre se $k=2$ si utilizza la \textit{binary crossentropy loss}.
+        \item Per la regressione viene utilizzata la \textit{mean squared error}.
+    \end{itemize}
+Il dataset prima di essere utilizzato viene inoltre separato in tre insiemi distinti:
+    \begin{itemize}
+        \item Il \textit{train set} che è l'effettivo dataset con cui viene addestrata la rete. Questo rappresenta circa l'80\% del dataset intero.
+        \item Il \textit{validation set} con cui, ad'ogni epoca, si va a valutare l'addestramento della rete. \Eaccentata{} fondamentale utilizzarlo poiché le metriche che si ottengo sul \textit{train set} non sono affidabili
+                poiché la rete potrebbe (e farà) \textit{overfitting}. Questo rappresenta circa il 10\% del dataset.
+        \item Il \textit{test set} con cui, a fine addestramento, si valuta di nuovo la rete. Come il \textit{validation set} rappresenta circa il 10\% del dataset.
+    \end{itemize}
+Requisito fondamentale è che questi tre insiemi devono essere distinti, e cioè non avere elementi in comune. 
+Se avessero elementi in comune le metriche ottenute non sarebbero più affidabili. 
 
 \subsection{Overfitting}\label{subsec:overfitting}
-    \subsubsection{Feature selection}
+Un modello si dice che è in \textit{overfitting} quando si adatta troppo ai dati osservati e quindi perde capacità di generalizzazione.
+In particolare nell'ambito del \ML{} e \DL{} succede quando il modello ha risultati molto buoni sul \textit{training set}, mentre significativamente peggiori sul \textit{validation} e \textit{test set}.
+
+Possiamo vedere un esempio creando un modello che cerca di approssimare una funzione (cioè un problema di regressione). 
+In \autoref{fig:esempi_overfitting_underfitting} possiamo vedere sia un modello in \textit{underfit} (cioè il contrario di \textit{overfit}), sia un modello ideale che ha approssimato correttamente la funzione e sia il modello in \textit{overfit}.
+Se utilizzassimo quest'ultimo modello per predire nuovi valori, ad esempio determinando il valore di $f(x)$ dove $x$ non fa parte dei punti, non sarebbe in grado di generarne di corretti, mentre il modello ideale si.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{images/esempio_overfitting_resize.png}
+    \caption{Esempio di modello in stato di overfitting, underfitting e ottimale}
+    \label{fig:esempi_overfitting_underfitting}
+\end{figure}
+Questo stato può essere causato da una serie di fattori:
+    \begin{itemize}
+        \item La complessità del modello, cioè il numero di parametri interni, è troppa alta rispetto al numero di osservazioni nel dataset.
+        \item La fase di addestramento è stata eseguita per troppo tempo.
+        \item Il dataset utilizzato per l'addestramento è troppo piccolo.
+    \end{itemize}
+Si può rilevare l'\textit{overfitting} guardando l'evoluzione della funzione di costo attraverso l'epoche di addestramento: nel caso in cui le \textit{loss} calcolate sul \textit{validation} e \textit{train set} divergono allora è molto probabile essere in \textit{overfitting}.
+Vediamo un esempio di grafico che ci mostra la divergenza fra le due in \autoref{fig:overfitting_grafo_divergenza}
+
+    \begin{figure}[h]
+        \centering
+        \includegraphics[scale=0.55]{images/LossOverfitting.png}
+        \caption{Divergenza fra loss nel validation e train set}
+        \label{fig:overfitting_grafo_divergenza}
+    \end{figure}
+Il modello utilizzato per questo lavoro soffre altamente di \textit{overfitting} e le cause sono principalmente la dimensione del dataset e la complessità del modello.
+La prima causa è difficilmente eliminabile visto che andrebbe generato un nuovo dataset, mentre la seconda causa invece verrà affrontata riducendo valori come la dimensione degli \textit{embedding}, del vettore delle \textit{features} e degli input.
+In particolare l'ultimo verrà fatto attraverso la riduzione dei valori di $c$, $l$ e $k$ introdotti in \autoref{subsec:cambiamenti_forma}.
+
+
 \subsection{Metriche utilizzate}\label{subsec:metriche}
+Le metriche sono un meccanismo fondamentale nella valutazione di un modello. 
+Per questo progetto vengono utilizzate principalmente metriche per la classificazione, mentre per la regressione viene utilizzato solo il valore della funzione di costo.
+In particolare vengono utilizzate le seguenti metriche:
+    \begin{itemize}
+        \item La precisione per ogni singola classe $i$ calcolata nel seguente modo:
+            \[P_i = \frac{TP_i}{TP_i + FP_i}\]
+            dove $TP_i$ rappresenta il numero di \textit{true positive} per la classe $i$ e $FP$ il numero di \textit{false positive}.
+            La precisione identifica quanti elementi classificati come di classe $i$ sono effettivamente di classe $i$.
+        \item Il recall per ogni singola classe $i$ calcolato come:
+            \[R_i = \frac{TP_i}{TP_i + FN_i}\]
+            dove $FN_i$ rappresenta il numero di \textit{false negative} per la classe $i$.+
+            Il recall rappresenta quanti degli elementi della classe $i$ sono stati effettivamente individuati.
+        \item L'f1-score per ogni classe $i$ che si calcola nel seguente modo:
+            \[F1_i = \frac{2 \times P_i \times R_i}{P_i + R_i}\]
+            e rappresenta la media armonica fra la precisione e il recall. Viene quindi utilizzata per bilanciare recall e precisione.
+        \item L'f1-score globale calcolato come media degli f1-score delle singole classi.
+    \end{itemize}
+Spesso succede che ci sia un \textit{trade off} tra la precisione e il recall.
+In base al tipo di problema che si sta cercando di risolvere verrà prediletta una delle due metriche.
+In questo lavoro è stato deciso di prediligere il recall, poiché è, a nostro avviso, più importante essere in grado di rilevare tutti i possibili errori  
 
 \section{Risultati}
 \subsection{Risultati dati dal test dataset}
