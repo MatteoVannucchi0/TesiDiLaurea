@@ -1,4 +1,5 @@
 \chapter{Il modello predittivo}\label{chap:modello}
+
 Nel seguente capitolo affronteremo lo sviluppo del modello predittivo. 
 Vedremo, prima di tutto, la struttura del modello discutendone i principali componenti e varie iterazioni di essa.  
 In un secondo momento vedremo un problema fondamentale dato dalla distribuzione del dataset: il problema dello sbilanciamento.
@@ -307,12 +308,12 @@ Utilizzando questa tecnica insieme all'\textit{oversampling} si riduce significa
 L'addestramento della rete è stato eseguito numerose volte provando valori per gli \textit{iper parametri} ogni volta diversi. 
 Questi parametri, nel nostro caso, consistono in:
     \begin{itemize}
-        \item Gli iper parametri standard come \textit{learning rate, batch size, epochs, steps per epoch} e \textit{dropout rate} (per il \textit{layers} di \textit{dropout} che discuteremo in \autoref{subsec:overfitting}).
+        \item Gli iper parametri standard come \textit{learning rate, batch size, epochs, steps per epoch} e \textit{dropout rate} (per il \textit{layers} di \textit{dropout}).
         \item La dimensione degli \textit{embedding} dei token dei cammini e d'inizio/fine, cioè il valore $d$ introdotto in \autoref{subsec:cambiamenti_forma}.
         \item La dimensione del vettore delle \textit{feature} prodotto dal modello code2vec.
         \item Il numero $k$ di classi da utilizzare. 
     \end{itemize}
-L'addestramento inoltre è stato eseguito utilizzando come ottimizzatore l'algoritmo Adam. 
+L'addestramento inoltre è stato eseguito utilizzando come ottimizzatore l'algoritmo Adam, descritto più in dettaglio in \cite{kingma2014adam}. 
 Come \textit{loss function} ne vengono utilizzate due, una per la regressione e una per la classificazione, e sono le seguenti:
     \begin{itemize}
         \item La \textit{categorical crossentropy loss} per la classificazione, nel caso si utilizzi un $k>2$, mentre se $k=2$ si utilizza la \textit{binary crossentropy loss}.
@@ -360,6 +361,7 @@ Vediamo un esempio di grafico che ci mostra la divergenza fra le due in \autoref
 Il modello utilizzato per questo lavoro soffre altamente di \textit{overfitting} e le cause sono principalmente la dimensione del dataset e la complessità del modello.
 La prima causa è difficilmente eliminabile visto che andrebbe generato un nuovo dataset, mentre la seconda causa invece verrà affrontata riducendo valori come la dimensione degli \textit{embedding}, del vettore delle \textit{features} e degli input.
 In particolare l'ultimo verrà fatto attraverso la riduzione dei valori di $c$, $l$ e $k$ introdotti in \autoref{subsec:cambiamenti_forma}.
+Un'altra metodologia utilizzata per ridurlo è stato l'uso di specifici \textit{layers} di \textit{dropouts}.
 
 
 \subsection{Metriche utilizzate}\label{subsec:metriche}
@@ -369,20 +371,22 @@ In particolare vengono utilizzate le seguenti metriche:
     \begin{itemize}
         \item La precisione per ogni singola classe $i$ calcolata nel seguente modo:
             \[P_i = \frac{TP_i}{TP_i + FP_i}\]
-            dove $TP_i$ rappresenta il numero di \textit{true positive} per la classe $i$ e $FP$ il numero di \textit{false positive}.
+            dove $TP_i$ e $FP_i$ rappresentano rispettivamente il numero di \textit{true positive} e \textit{false positive} per la classe $i$.             
             La precisione identifica quanti elementi classificati come di classe $i$ sono effettivamente di classe $i$.
-        \item Il recall per ogni singola classe $i$ calcolato come:
+        \item Il recall per ogni singola classe $i$, calcolato come:
             \[R_i = \frac{TP_i}{TP_i + FN_i}\]
-            dove $FN_i$ rappresenta il numero di \textit{false negative} per la classe $i$.+
+            dove $FN_i$ rappresenta il numero di \textit{false negative} per la classe $i$.
             Il recall rappresenta quanti degli elementi della classe $i$ sono stati effettivamente individuati.
         \item L'f1-score per ogni classe $i$ che si calcola nel seguente modo:
             \[F1_i = \frac{2 \times P_i \times R_i}{P_i + R_i}\]
             e rappresenta la media armonica fra la precisione e il recall. Viene quindi utilizzata per bilanciare recall e precisione.
         \item L'f1-score globale calcolato come media degli f1-score delle singole classi.
+        \item La matrice $M$ di confusione. Ogni elemento $M_{i,j}$ rappresenta il numero di volte in cui il modello ha predetto la classe $j$ mentre la classe vera era $i$.
+         Le predizioni corrette sono quindi rappresentate nella diagonale, cioè quando $i=j$.
     \end{itemize}
 Spesso succede che ci sia un \textit{trade off} tra la precisione e il recall.
 In base al tipo di problema che si sta cercando di risolvere verrà prediletta una delle due metriche.
-In questo lavoro è stato deciso di prediligere il recall, poiché è, a nostro avviso, più importante essere in grado di rilevare tutti i possibili errori  
+In questo lavoro è stato deciso di prediligere il recall, poiché è, a nostro avviso, più importante essere in grado di rilevare tutti i possibili errori.
 
 \section{Risultati}
 \subsection{Risultati dati dal test dataset}
