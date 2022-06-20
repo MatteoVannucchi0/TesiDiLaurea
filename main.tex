@@ -24,13 +24,7 @@
 \usepackage{setspace} 
 \onehalfspacing
 
-% Per titolo capitoli
-\usepackage{fancyhdr}
-\pagestyle{fancy}
-\renewcommand\chaptermark[1]{\markboth{\thechapter\ #1}{}}
 
-\fancyhead[L]{\nouppercase{\leftmark}}
-\fancyhead[R]{\thepage}
 
 
 %Per tabelle
@@ -132,6 +126,13 @@
 
 % Per il frontespizio
 \textwidth=450pt\oddsidemargin=0pt\evensidemargin=0pt
+
+% Per titolo capitoli
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+%\renewcommand\chaptermark[1]{\markboth{\thechapter\ #1}{}}
+%\fancyhead[L]{\nouppercase{\leftmark}}
+%\fancyhead[R]{\thepage}
 
 % Documents
 \begin{document}
