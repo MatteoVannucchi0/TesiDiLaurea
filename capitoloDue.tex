@@ -293,7 +293,7 @@ In \autoref{fig:trade_off} possiamo notare il \textit{trade-off} che avviene tra
         ylabel={Dispersività},
         yticklabels={,,},
         xticklabels={,,},
-        xmin=0,    xmax=1,
+        xmin=0,    xmax=2, % Prima era 1 
         ymin=0,    ymax=1.718,
         axis line style={->},
         legend pos=south east
@@ -313,49 +313,10 @@ In \autoref{fig:trade_off} possiamo notare il \textit{trade-off} che avviene tra
 Nel lavoro svolto è stato scelto di eseguire le analisi a livello di funzione, andando però ad aumentare il quantitativo d'informazioni a disposizione aggiungendo un contesto della funzione (la cui definizione verrà data in seguito nella \autoref{subsec:context}). 
 Facendo questa scelta, è possibile approssimare il problema ipotizzando che in una data funzione ci sia massimo un solo errore, rendendo quindi l'architettura del modello finale più semplice.
 
-
-
 Una volta determinato il livello a cui svolgere le analisi possiamo tornare al problema principale: estrarre il codice della funzione che racchiude l'errore. 
 Nonostante questo possa sembrare un problema semplice di analisi testuale vedremo come, in realtà, non lo sia.
 Questo vale ancora di più per linguaggi come C e \CPP{} che, tramite la loro sintassi molto libera, rendono il tutto più complicato.
-Prima di discutere di ciò dobbiamo quindi introdurre un concetto fondamentale: gli alberi di sintassi astratta.
-
-
-\subsection{Alberi di sintassi astratta}
-Un albero di sintassi astratta, in breve \textit{ast} (dall'inglese \textit{abstract syntax tree}), è una rappresentazione ad albero della struttura sintattica astratta di un testo, nel nostro caso del codice sorgente.
-Queste strutture sono spesso generate da parser specifici e vengono utilizzati come rappresentazione intermedia del programma in un processo di compilazione.
-
-Possiamo vedere un esempio di albero prendendo il frammento di codice nello \autoref{code:esempio} scritto in uno pseudo-linguaggio.
-Un possibile albero di sintassi astratta per questo frammento di codice è quello indicato in \autoref{fig:ast_esempio}.
-Come si può vedere l'\textit{ast} rappresenta in modo efficace la struttura completa del codice, andando ad individuare e distinguere elementi come:
-  \begin{itemize}
-    \item Il corpo, la \textit{signature} e il valore di ritorno della funzione. 
-    \item La dichiarazione della variabile 'total' e il blocco del \textit{for}.
-    \item I componenti del costrutto \textit{for}: il corpo, la condizione, l'inizializzazione e lo step della variabile di controllo.
-  \end{itemize}
-
-  \begin{code}[caption={Frammento di codice che calcola la somma dei valori in un vettore}, label={code:esempio}]
-    void foo(int[] array){
-      int totale = 0;
-      for(int i = 0; i < array.length; i++){
-        totale = totale + array[i]
-      }
-      return totale;
-    }
-  \end{code}
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[scale=0.5]{images/astEsempio.png}
-  \caption{Esempio di albero di sintassi astratta}
-  \label{fig:ast_esempio}
-\end{figure}
-
-In questo progetto verranno utilizzati gli alberi di sintassi astratta per poter estrarre correttamente il codice della funzione che racchiude l'errore. 
-Questa operazione poteva anche essere fatta a livello testuale ricercando le parentesi graffe di apertura e chiusura della funzione. 
-In questa maniera, però, sorgono casi problematici come l'utilizzo di parentesi graffe all'interno di commenti (o stringhe) che vanno ignorati o l'utilizzo particolare di direttive \textit{define}.
-Tutto ciò rende il problema, in apparenza semplice, in realtà complesso.
-A supporto di ciò vediamo lo \autoref{code:esempio_codice_complesso} in cui, nonostante sia codice \CPP{} completamente valido, l'individuazione del corpo della funzione che racchiude la linea di errore è un operazione tutt'altro che semplice.
+A supporto di ciò vediamo lo \autoref{code:esempio_codice_complesso}.
 
 \begin{code}[language=c++, caption={Esempio di codice valido con struttura particolare}, label={code:esempio_codice_complesso}]
   #DEFINE OPENBRACKET {
@@ -368,8 +329,12 @@ A supporto di ciò vediamo lo \autoref{code:esempio_codice_complesso} in cui, no
 
   CLOSEBRACKET
 \end{code}
+In questo frammento si possono individuare due fattori problematici: la presenza di parentesi graffe in commenti e l'utilizzo particolare di direttive define.
+Se volessimo ricavare il corpo della funzione analizzando semplicemente il testo dovremmo trovare le parantesi graffe di apertura e chiusura di esso, ma i due fattori appena elencati e ulteriori non discussi rendono necessarie delle accortezze maggiori. 
 
-\subsection{Generazione e parsing degli AST}
+Per risolvere questo problema utilizzeremo gli alberi di sintassi astratta.
+
+\subsection{Generazione e parsing degli alberi di sintassi astratta}
 Come accennato nella precedente sezione, in questo lavoro vengono utilizzati gli \textit{ast} come metodo per estrarre i blocchi delle funzioni e il loro relativo contesto.
 Prima di tutto bisogna essere in grado di generare un albero di sintassi astratta dato un file sorgente.
 Per far ciò viene utilizzato il compilatore Clang che, attraverso flag specifiche, è in grado di generare un albero rappresentato in formato JSON.
