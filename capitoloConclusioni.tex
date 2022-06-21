@@ -1,3 +1,33 @@
 \chapter{Conclusioni}
+In questo elaborato è stata discussa la creazione di un modello per il rilevamento di errori nel codice di programmi scritti in linguaggio C e \CPP.
+La necessità di sviluppare un modello di questo genere, quando nel campo sono ormai diffusi analizzatori sia statici sia dinamici, deriva dal tentativo di ridurre il numero di falsi positivi rilevati da essi.
+Il lavoro è stato svolto seguendo la falsariga del operato svolto in \cite{alon2019code2vec}, nella quale viene sviluppato un modello, sempre in \DL{}, in grado di processare codice in un formato di vettore di \textit{ast contexts}.
+In particolare, questo progetto si è sviluppato in due fasi distinte: la generazione del dataset e la creazione del modello.
 
-\section{Possibili migliorie}
+Per la generazione del dataset è stata utilizzata come base una collezione di progetti, risultato del lavoro descritto nella ricerca \cite{gelman2019source}.
+Per ogni progetto sono stati poi generati dei report di analisi statica che sono stati poi utilizzati per estrarre le coppie \record{code snippet, errore}.
+I \textit{code snippet} sono poi stati processati al fine di creare dei vettori di \textit{ast contexts}.
+
+La seconda parte del progetto consisteva nello sviluppo del modello predittivo, il quale obbiettivo è duplice: predire la classe di errore e predire il numero della riga dell'eventuale errore.
+Abbiamo poi visto il problema principale riscontrato nell'addestramento, lo sbilanciamento del dataset, ed una serie di metodi per combatterlo. 
+In seguito è stato anche esplorato il problema del \textit{overfitting}.
+Come però abbiamo visto nella \autoref{sec:risultati}, i risultati ottenuti non sono entusiasmanti. 
+Ciò deriva da una combinazione di più fattori:
+    \begin{itemize}
+        \item La dimensione ridotta del dataset.
+        \item La difficoltà nell'addestramento del modello che spesso finisce in stati di \textit{overfitting}.
+        \item La complessità intrinseca del problema. Infatti anche per un programmatore esperto potrebbe essere difficile identificare correttamente certi errori.
+    \end{itemize}
+
+\section{Miglioramenti possibili e sviluppi futuri}
+Dai risultati ottenuti possiamo concludere che il modello, come sviluppato in questo progetto, non è sufficientemente capace di predire gli errori.
+Idealmente si vorrebbe sostituire, o almeno affiancare, un modello di questo tipo ai tradizionali analizzatori, ma nelle condizioni attuali non sarebbe possibile.
+
+Come però abbiamo visto nell'introduzione, diversi modelli sia più tradizionali sia di \ML{} e \DL{} sono stati sviluppati con successo. 
+Quindi ci sono sicuramente porzioni migliorabili in questo lavoro:
+    \begin{itemize}
+        \item La dimensione del dataset che, nonostante non sia di piccole dimensioni, potrebbe non essere adatto per una generalizzazione corretta del modello.
+        \item La struttura del modello stesso. Infatti, come abbiamo visto, il modello è difficilmente addestrabile ed eccessivamente complesso.
+    \end{itemize}
+Soluzione alternativa per la struttura del modello potrebbe essere quella descritta in \cite{bui2021infercode}, nella quale viene generato una rappresentazione del codice attraverso l'uso di un \textit{Tree-Based Convolutional Neural Network} già addestrato. 
+Il \textit{training} in quel caso potrebbe rivelarsi più semplice, poiché solamente la classificazione deve essere imparata, mentre non la porzione di \textit{encoding} del codice. 

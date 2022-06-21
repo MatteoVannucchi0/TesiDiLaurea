@@ -122,55 +122,36 @@ Per evitare di avere una varianza troppo grande, con a volte numeri di riga molt
 \section{Sbilanciamento del dataset}\label{sec:sbilanciamento}
 Illustriamo ora il problema principale in cui ci si è imbattuti nel realizzare questo modello: lo sbilanciamento del dataset.
 Un dataset, in un problema di classificazione, si definisce sbilanciato se le proporzioni del numero di campioni per ogni classe hanno grosse differenze.
-Nel nostro caso possiamo vedere ciò in \autoref{fig:sbilanciamento}. 
+Nel nostro caso possiamo vedere ciò in \autoref{tab:sbilanciamento}. 
 Come si può notare la classe dell'assenza di errori rappresenta circa il 95\% del dataset, mentre il restante 5\% è suddiviso fra le 16 classi possibili di errori.
-
-
-\begin{figure}[h]
+\begin{table}
     \centering
-    \begin{tikzpicture}
-        \begin{axis}[
-            width  = \textwidth * 0.7,
-            height = 7cm,
-            major x tick style = transparent,
-            ybar=0.1pt,
-            bar width=10pt,
-            ymajorgrids = true,
-            ylabel style={yshift=2ex},
-            xlabel=Classe,
-            ylabel=Numero di samples,
-            xtick = data,
-            scaled y ticks = false,
-            ymin=0,ymax=42000,
-            ytick style={draw=none},
-            ]
-    \addplot table {
-      Classe Numero
-      0 41417 
-      1 1032
-      2 911
-      3 792
-      4 325
-      5 122
-      6 85
-      7 83
-      8 80
-      9 56
-      10 31
-      11 16    
-      12 10
-      13 4
-      14 3
-      15 2
-      16 1      
-    };
-    \end{axis}
-    \end{tikzpicture}
-
-    \caption{Figura che mostra quanto il dataset sia sbilanciato sia verso la classe dell'assenza di errori sia internamente fra le classi di errori}
-    \label{fig:sbilanciamento}
-\end{figure}
-
+    \begin{tabular}[t]{lllll}
+        \hline
+        Classe & N. osservazioni & Percentuale &  &  \\
+        \hline
+        0      & 41417                  & 92,1\%                 &  &  \\
+        1      & 1032                   & 2,3\%                  &  &  \\
+        2      & 911                    & 2,0\%                  &  &  \\
+        3      & 792                    & 1,8\%                  &  &  \\
+        4      & 325                    & 0,7\%                  &  &  \\
+        5      & 122                    & 0,3\%                  &  &  \\
+        6      & 85                    & 0,2\%                  &  &  \\
+        7      & 83                    & 0,2\%                  &  &  \\
+        8      & 80                    & 0,2\%                  &  &  \\
+        9      & 56                    & 0,1\%                  &  &  \\
+        10      & 31                    & 0,06\%                  &  &  \\
+        11      & 16                    & 0,03\%                  &  &  \\
+        12      & 10                    & 0,02\%                  &  &  \\
+        13      & 4                    & 0,008\%                  &  &  \\
+        14      & 3                    & 0,006\%                  &  &  \\
+        15      & 2                    & 0,004\%                  &  &  \\
+        16      & 1                    & 0,002\%                  &  &  
+    \end{tabular}
+    \caption{Tabella che mostra quanto il dataset sia sbilanciato sia verso la classe dell'assenza di errori sia internamente fra le classi di errori}
+    \label{tab:sbilanciamento}
+\end{table}
+%44970
 Il problema dello sbilanciamento è molto grave poiché rende difficile sia l'addestramento della rete sia la sua valutazione, vediamo ora un esempio di ciò.
 Supponiamo di creare un modello che predice, per ogni input datogli, sempre l'assenza di errore: col nostro dataset questo modello avrebbe una precisione del 95\%.
 Vedendo solo questa metrica potrebbe quindi sembrare essere un modello quasi ideale, mentre invece ovviamente non lo è.
@@ -233,76 +214,39 @@ Avremo, quindi, al variare di $k$ i seguenti casi:
         \item Ponendo $k=5$, come utilizzato in questo progetto, avremo la classificazione degli errori più comuni (\textit{memory leak}, \textit{null dereference}, \textit{dead store}), mentre il restante viene classificato come errore sconosciuto.
         \item Ponendo $k$ più vicino al valore di $n$ non avremo grossi cambiamenti.
     \end{itemize}
-Possiamo vedere in \autoref{fig:riduzione} come al variare di $k$ cambia la distribuzione delle classi. 
+Possiamo vedere in \autoref{tab:riduzione} come al variare di $k$ cambia la distribuzione delle classi.
 
 Utilizzando questa tecnica insieme all'\textit{oversampling} si riduce significativamente l'\textit{overfitting}, poiché lo sbilanciamento del dataset è minore.
 
-\begin{figure}[h]
+\begin{table}[h]
     \centering
-    \begin{subfigure}{.5\textwidth}
-        \centering
-        \begin{tikzpicture}
-            \begin{axis}[
-                width  = \textwidth * 0.8,
-                height = 7cm,
-                major x tick style = transparent,
-                ybar=0.1pt,
-                bar width=10pt,
-                ymajorgrids = true,
-                ylabel style={yshift=2ex},
-                xlabel=Classe,
-                ylabel=Numero di samples,
-                xtick = data,
-                scaled y ticks = false,
-                ymin=0,ymax=42000,
-                ytick style={draw=none},
-                ]
-                \addplot table {
-                    Classe Numero
-                    0 41417 
-                    1 3553
-                  };
-        \end{axis}
-        \end{tikzpicture}
-    \caption{Riduzione del numero di classi a $k=2$}
-    \end{subfigure}%
-    \begin{subfigure}{.5\textwidth}
-        \centering
-        \begin{tikzpicture}
-        \begin{axis}[
-            width  = \textwidth * 0.8,
-            height = 7cm,
-            major x tick style = transparent,
-            ybar=0.1pt,
-            bar width=10pt,
-            ymajorgrids = true,
-            ylabel style={yshift=2ex},
-            xlabel=Classe,
-            ylabel=Numero di samples,
-            xtick = data,
-            scaled y ticks = false,
-            ymin=0,ymax=42000,
-            ytick style={draw=none},
-            ]
-            \addplot table {
-                Classe Numero
-                0 41417 
-                1 1032
-                2 911
-                3 792
-                4 818
-              };
-    \end{axis}
-    \end{tikzpicture}
-
-    \caption{Riduzione del numero di classi a $k=5$}
-    \end{subfigure}
-
-
+    \begin{subtable}[t]{.45\linewidth}
+        \caption{Riduzione del numero di classi a $k=2$}
+        \begin{tabular}[t]{lllll}
+            \hline
+            Classe & N. osservazioni & Percentuale &  &  \\
+            \hline
+            0      & 41417                  & 92,1\%                 &  &  \\
+            1      & 3553                   & 7,9\%                  &  &  \\
+        \end{tabular}
+    \end{subtable}
+    \quad
+    \begin{subtable}[t]{.45\linewidth}
+        \caption{Riduzione del numero di classi a $k=5$}
+        \begin{tabular}[t]{lllll}
+            \hline
+            Classe & N. osservazioni & Percentuale &  &  \\
+            \hline
+            0      & 41417                  & 92,1\%                 &  &  \\
+            1      & 1032                   & 2,3\%                  &  &  \\
+            2      & 911                    & 2,0\%                  &  &  \\
+            3      & 792                    & 1,8\%                  &  &  \\
+            4      & 818                    & 1,8\%                  &  & 
+        \end{tabular}
+    \end{subtable}
     \caption{Comparazione tra riduzione a $k=5$ e $k=2$ classi}
-    \label{fig:riduzione}
-\end{figure}
-\pagebreak
+    \label{tab:riduzione}
+\end{table}
 
 \section{Addestramento}
 L'addestramento della rete è stato eseguito numerose volte provando valori per gli \textit{iper parametri} ogni volta diversi. 
@@ -388,7 +332,7 @@ Spesso succede che ci sia un \textit{trade off} tra la precisione e il recall.
 In base al tipo di problema che si sta cercando di risolvere verrà prediletta una delle due metriche.
 In questo lavoro è stato deciso di prediligere il recall, poiché è, a nostro avviso, più importante essere in grado di rilevare tutti i possibili errori.
 
-\section{Risultati}
+\section{Risultati}\label{sec:risultati}
 \subsection{Risultati dati dal test dataset}
 \subsection{Risultati dati su codice creato al momento}
 
